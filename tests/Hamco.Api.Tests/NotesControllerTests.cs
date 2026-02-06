@@ -137,4 +137,82 @@ public class NotesControllerTests : IClassFixture<WebApplicationFactory<Program>
         var notes = await response.Content.ReadFromJsonAsync<List<NoteResponse>>();
         Assert.NotNull(notes); // List exists (empty or not is fine)
     }
+
+    // ==================== UPDATE TESTS ====================
+
+    [Fact]
+    public async Task UpdateNote_ValidData_Returns200WithUpdatedNote()
+    {
+        // Arrange - Create note, get ID
+        var createRequest = new CreateNoteRequest
+        {
+            Title = "Original Title",
+            Content = "Original content"
+        };
+        var createResponse = await _client.PostAsJsonAsync("/api/notes", createRequest);
+        var createdNote = await createResponse.Content.ReadFromJsonAsync<NoteResponse>();
+        Assert.NotNull(createdNote);
+
+        var updateRequest = new UpdateNoteRequest
+        {
+            Title = "Updated Title",
+            Content = "Updated content"
+        };
+
+        // Act - PUT /api/notes/{id} with new title/content
+        var response = await _client.PutAsJsonAsync($"/api/notes/{createdNote.Id}", updateRequest);
+
+        // Assert - 200 OK with updated data, slug regenerated if title changed
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var updatedNote = await response.Content.ReadFromJsonAsync<NoteResponse>();
+        Assert.NotNull(updatedNote);
+        Assert.Equal(createdNote.Id, updatedNote.Id);
+        Assert.Equal("Updated Title", updatedNote.Title);
+        Assert.Equal("updated-title", updatedNote.Slug); // Slug regenerated
+        Assert.Equal("Updated content", updatedNote.Content);
+        Assert.True(updatedNote.UpdatedAt > createdNote.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task UpdateNote_NonExistingId_Returns404()
+    {
+        // Arrange
+        var updateRequest = new UpdateNoteRequest
+        {
+            Title = "Updated Title",
+            Content = "Updated content"
+        };
+
+        // Act - PUT /api/notes/99999
+        var response = await _client.PutAsJsonAsync("/api/notes/99999", updateRequest);
+
+        // Assert - 404 NotFound
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateNote_InvalidData_Returns400()
+    {
+        // Arrange - Create note, get ID
+        var createRequest = new CreateNoteRequest
+        {
+            Title = "Original Title",
+            Content = "Original content"
+        };
+        var createResponse = await _client.PostAsJsonAsync("/api/notes", createRequest);
+        var createdNote = await createResponse.Content.ReadFromJsonAsync<NoteResponse>();
+        Assert.NotNull(createdNote);
+
+        var updateRequest = new UpdateNoteRequest
+        {
+            Title = "", // Invalid - empty title
+            Content = "Updated content"
+        };
+
+        // Act - PUT /api/notes/{id} with empty title
+        var response = await _client.PutAsJsonAsync($"/api/notes/{createdNote.Id}", updateRequest);
+
+        // Assert - 400 BadRequest
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }

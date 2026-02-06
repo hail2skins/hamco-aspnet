@@ -93,4 +93,36 @@ public class NotesController : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpPut("{id}")]
+    public async Task<ActionResult<NoteResponse>> UpdateNote(int id, UpdateNoteRequest request)
+    {
+        var note = await _context.Notes.FindAsync(id);
+
+        if (note == null || note.DeletedAt != null)
+        {
+            return NotFound();
+        }
+
+        // Update fields
+        note.Title = request.Title;
+        note.Slug = SlugGenerator.GenerateSlug(request.Title); // Regenerate slug
+        note.Content = request.Content;
+        note.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        var response = new NoteResponse
+        {
+            Id = note.Id,
+            Title = note.Title,
+            Slug = note.Slug,
+            Content = note.Content,
+            UserId = note.UserId,
+            CreatedAt = note.CreatedAt,
+            UpdatedAt = note.UpdatedAt
+        };
+
+        return Ok(response);
+    }
 }
