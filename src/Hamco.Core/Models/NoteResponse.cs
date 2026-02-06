@@ -6,7 +6,7 @@ public class NoteResponse
     public string Title { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
-    public string UserId { get; set; } = string.Empty;
+    public string? UserId { get; set; } // Nullable (no auth for now)
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

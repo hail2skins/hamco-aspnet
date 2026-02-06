@@ -38,16 +38,17 @@ public class HamcoDbContext : DbContext
             entity.Property(e => e.Title).HasColumnName("title").IsRequired().HasMaxLength(255);
             entity.Property(e => e.Slug).HasColumnName("slug").IsRequired().HasMaxLength(255);
             entity.Property(e => e.Content).HasColumnName("content").IsRequired();
-            entity.Property(e => e.UserId).HasColumnName("user_id").IsRequired();
+            entity.Property(e => e.UserId).HasColumnName("user_id"); // Not required (nullable)
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
 
-            // Foreign key relationship
+            // Optional foreign key relationship
             entity.HasOne(e => e.User)
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
         });
     }
 }
