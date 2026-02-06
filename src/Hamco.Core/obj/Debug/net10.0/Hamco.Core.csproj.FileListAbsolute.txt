@@ -1,0 +1,12 @@
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/obj/Debug/net10.0/Hamco.Core.csproj.AssemblyReference.cache
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/obj/Debug/net10.0/Hamco.Core.GeneratedMSBuildEditorConfig.editorconfig
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/obj/Debug/net10.0/Hamco.Core.AssemblyInfoInputs.cache
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/obj/Debug/net10.0/Hamco.Core.AssemblyInfo.cs
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/obj/Debug/net10.0/Hamco.Core.csproj.CoreCompileInputs.cache
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/bin/Debug/net10.0/Hamco.Core.deps.json
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/bin/Debug/net10.0/Hamco.Core.dll
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/bin/Debug/net10.0/Hamco.Core.pdb
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/obj/Debug/net10.0/Hamco.Core.dll
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/obj/Debug/net10.0/refint/Hamco.Core.dll
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/obj/Debug/net10.0/Hamco.Core.pdb
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/obj/Debug/net10.0/ref/Hamco.Core.dll

@@ -8,7 +8,7 @@ namespace Hamco.Core.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddAuthCore(
+    public static IServiceCollection AddAuthServices(
         this IServiceCollection services,
         string jwtSecret,
         string jwtIssuer,
