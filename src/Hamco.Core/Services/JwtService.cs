@@ -186,7 +186,13 @@ public class JwtService : IJwtService
         };
 
         // Step 4: Add role claims for authorization
-        // 'foreach' loop iterates over each role in user.Roles list
+        // Add Admin role if user is an administrator
+        if (user.IsAdmin)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+        }
+        
+        // 'foreach' loop iterates over each additional role in user.Roles list
         // Syntax: foreach (type variable in collection) { ... }
         foreach (var role in user.Roles)
         {

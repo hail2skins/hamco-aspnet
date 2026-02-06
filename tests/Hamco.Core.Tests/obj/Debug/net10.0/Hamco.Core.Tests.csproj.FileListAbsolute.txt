@@ -106,3 +106,4 @@
 /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Core.Tests/obj/Debug/net10.0/Hamco.Core.Tests.pdb
 /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Core.Tests/obj/Debug/net10.0/Hamco.Core.Tests.genruntimeconfig.cache
 /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Core.Tests/obj/Debug/net10.0/ref/Hamco.Core.Tests.dll
+/Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Core.Tests/obj/Debug/net10.0/Hamco.Core.Tests.sourcelink.json

@@ -168,7 +168,10 @@ public class AuthController : ControllerBase
             return Conflict(new { message = "Email already exists" });
         }
 
-        // Step 2: Create new user entity
+        // Step 2: Check if this is the first user (should be admin)
+        var isFirstUser = !await _context.Users.AnyAsync();
+        
+        // Step 3: Create new user entity
         // Note: Password is HASHED, not stored in plain text!
         var user = new User
         {
@@ -184,23 +187,30 @@ public class AuthController : ControllerBase
             PasswordHash = _passwordHasher.HashPassword(request.Password),
             
             CreatedAt = DateTime.UtcNow,
+            
+            // First user automatically becomes admin
+            IsAdmin = isFirstUser,
+            
+            // Email not verified yet (future: send verification email via Mailjet)
+            IsEmailVerified = false,
+            
             // Roles left empty (default: new List<string>())
         };
 
-        // Step 3: Add user to database
+        // Step 4: Add user to database
         _context.Users.Add(user);
         
-        // Step 4: Save changes (execute INSERT)
-        // SQL: INSERT INTO users (id, username, email, password_hash, created_at)
-        //      VALUES (?, ?, ?, ?, ?);
+        // Step 5: Save changes (execute INSERT)
+        // SQL: INSERT INTO users (id, username, email, password_hash, created_at, is_admin, is_email_verified)
+        //      VALUES (?, ?, ?, ?, ?, ?, ?);
         await _context.SaveChangesAsync();
 
-        // Step 5: Generate JWT token
+        // Step 6: Generate JWT token
         // Token includes user ID, email, roles (if any)
         // See JwtService.GenerateToken() for details
         var token = _jwtService.GenerateToken(user);
 
-        // Step 6: Return 201 Created with authentication response
+        // Step 7: Return 201 Created with authentication response
         // CreatedAtAction returns 201 with Location header pointing to resource
         // For auth endpoints, we return the response directly (no specific GET endpoint)
         return CreatedAtAction(nameof(Register), new AuthResponse

@@ -97,6 +97,38 @@ public class NotesControllerTests : IClassFixture<WebApplicationFactory<Program>
         _client = factory.CreateClient();
     }
 
+    /// <summary>
+    /// Helper method: Creates an authenticated admin client for testing.
+    /// </summary>
+    /// <remarks>
+    /// Since notes now require authentication and admin role to create,
+    /// most tests need an authenticated client. This helper method:
+    /// 1. Registers a new admin user (first user is auto-admin)
+    /// 2. Gets JWT token from registration response
+    /// 3. Creates new HttpClient with Authorization header
+    /// 4. Returns authenticated client ready for protected endpoints
+    /// </remarks>
+    private async Task<HttpClient> GetAuthenticatedAdminClientAsync()
+    {
+        // Register a new user (first user becomes admin automatically)
+        var registerRequest = new RegisterRequest
+        {
+            Username = $"AdminUser_{Guid.NewGuid()}",  // Unique username
+            Email = $"admin_{Guid.NewGuid()}@test.com",  // Unique email
+            Password = "TestPassword123"
+        };
+        
+        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", registerRequest);
+        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponse>();
+        
+        // Create new client with Bearer token
+        var authenticatedClient = _factory.CreateClient();
+        authenticatedClient.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
+        
+        return authenticatedClient;
+    }
+
     // ============================================================================
     // CREATE TESTS (POST /api/notes)
     // ============================================================================
@@ -129,7 +161,9 @@ public class NotesControllerTests : IClassFixture<WebApplicationFactory<Program>
     [Fact]
     public async Task CreateNote_ValidRequest_Returns201WithNote()
     {
-        // ARRANGE: Set up test data
+        // ARRANGE: Get authenticated admin client
+        var authenticatedClient = await GetAuthenticatedAdminClientAsync();
+        
         // Create request object with valid note data
         var createNoteRequest = new CreateNoteRequest
         {
@@ -137,14 +171,14 @@ public class NotesControllerTests : IClassFixture<WebApplicationFactory<Program>
             Content = "This is test content"
         };
 
-        // ACT: Execute the operation being tested
+        // ACT: Execute the operation being tested with authenticated client
         // PostAsJsonAsync() extension method:
         //   - Serializes object to JSON
         //   - Sets Content-Type: application/json header
-        //   - Sends POST request
+        //   - Sends POST request with Bearer token
         //   - Returns HTTP response
         // 'await' waits for async operation to complete
-        var response = await _client.PostAsJsonAsync("/api/notes", createNoteRequest);
+        var response = await authenticatedClient.PostAsJsonAsync("/api/notes", createNoteRequest);
 
         // ASSERT: Verify results are correct
         // Assert.Equal(expected, actual) compares values

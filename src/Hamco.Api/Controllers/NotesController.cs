@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using Hamco.Core.Models;
 using Hamco.Core.Utilities;
 using Hamco.Data;
@@ -40,6 +42,7 @@ namespace Hamco.Api.Controllers;
 /// </remarks>
 [ApiController]  // Enables automatic model validation and API conventions
 [Route("api/[controller]")]  // Route pattern: /api/notes ([controller] = Notes)
+[Authorize]  // Require authentication for all endpoints in this controller
 public class NotesController : ControllerBase
 {
     // Private field to store database context
@@ -128,9 +131,22 @@ public class NotesController : ControllerBase
     ///   Follows REST conventions (POST should return created resource).
     /// </remarks>
     [HttpPost]
+    [Authorize(Roles = "Admin")]  // Only administrators can create notes
     public async Task<ActionResult<NoteResponse>> CreateNote(CreateNoteRequest request)
     {
-        // Step 1: Create Note entity from request DTO
+        // Step 1: Extract user ID from JWT token
+        // User.FindFirst() searches for claim by type
+        // ClaimTypes.NameIdentifier contains the user ID we added in JwtService
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        if (string.IsNullOrEmpty(userId))
+        {
+            // Should never happen if [Authorize] is working correctly
+            // But defensive programming: verify we have a user ID
+            return Unauthorized(new { message = "User ID not found in token" });
+        }
+        
+        // Step 2: Create Note entity from request DTO
         // Object initializer syntax: new Type { Property = value, ... }
         // More readable than: var note = new Note(); note.Title = ...; note.Slug = ...;
         var note = new Note
@@ -138,19 +154,19 @@ public class NotesController : ControllerBase
             Title = request.Title,  // From user input
             Slug = SlugGenerator.GenerateSlug(request.Title),  // Auto-generated
             Content = request.Content,  // From user input
-            UserId = null,  // No authentication enforced yet (everyone is anonymous)
+            UserId = userId,  // From authenticated user's JWT token
             CreatedAt = DateTime.UtcNow,  // Current UTC time
             UpdatedAt = DateTime.UtcNow   // Same as CreatedAt initially
         };
         // Note: Id is not set (database will auto-generate)
 
-        // Step 2: Add note to EF Core change tracker
+        // Step 3: Add note to EF Core change tracker
         // _context.Notes.Add() tells EF "I want to insert this"
         // Doesn't execute SQL yet (just tracks the intent)
         // EF will generate: INSERT INTO notes (...) VALUES (...)
         _context.Notes.Add(note);
         
-        // Step 3: Save changes to database
+        // Step 4: Save changes to database
         // 'await' keyword pauses execution until database operation completes
         // While waiting, thread is freed to handle other requests (non-blocking)
         // SaveChangesAsync() executes all pending operations in a transaction:
@@ -163,7 +179,7 @@ public class NotesController : ControllerBase
         
         // After SaveChangesAsync(), note.Id is populated by database!
 
-        // Step 4: Map Note entity to NoteResponse DTO
+        // Step 5: Map Note entity to NoteResponse DTO
         // Why create response object?
         //   - Response might differ from entity (hide fields, add computed fields)
         //   - Consistent API contract (separate from database model)
@@ -180,7 +196,7 @@ public class NotesController : ControllerBase
         };
         // Note: We don't expose DeletedAt in response (always null for new notes)
 
-        // Step 5: Return 201 Created response
+        // Step 6: Return 201 Created response
         // CreatedAtAction() parameters:
         //   1. nameof(CreateNote): Action name for Location header URL
         //   2. new { id = note.Id }: Route values for URL (api/notes/123)

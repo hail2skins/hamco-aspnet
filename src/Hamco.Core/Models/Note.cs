@@ -68,19 +68,20 @@ public class Note
     public string Content { get; set; } = string.Empty;
     
     /// <summary>
-    /// ID of the user who created this note. Nullable for anonymous posts.
+    /// ID of the user who created this note. Required field.
     /// </summary>
     /// <remarks>
-    /// The '?' makes this nullable (C# 8+ nullable reference types).
-    /// Currently set to null because authentication is not enforced.
+    /// Changed from nullable (string?) to required (string).
+    /// Now that authentication is enforced, every note must have an owner.
     /// 
-    /// In C#:
-    ///   - 'string' = non-nullable (must have a value)
-    ///   - 'string?' = nullable (can be null)
+    /// The value is extracted from JWT token when user creates a note:
+    ///   var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    ///   note.UserId = userId;
     /// 
-    /// Future: When auth is enforced, this will be populated from JWT token.
+    /// This creates a foreign key relationship to the users table.
+    /// EF Core will enforce referential integrity.
     /// </remarks>
-    public string? UserId { get; set; }
+    public string UserId { get; set; } = string.Empty;
     
     /// <summary>
     /// UTC timestamp when this note was created.
@@ -130,7 +131,12 @@ public class Note
     /// Navigation properties in EF Core:
     ///   - Not stored in database (virtual relationship)
     ///   - Populated when you use .Include() in queries
-    ///   - Nullable because UserId is nullable
+    ///   - Required now that UserId is required
+    /// 
+    /// The 'null!' syntax is called "null-forgiving operator":
+    ///   - Tells compiler "I know this is null now, but EF will populate it"
+    ///   - Used for navigation properties that EF manages
+    ///   - Alternative: User? would allow null, but we want strong typing
     /// 
     /// Example query:
     ///   var notes = await _context.Notes
@@ -139,5 +145,5 @@ public class Note
     /// 
     /// Without .Include(), this property will be null even if UserId has a value.
     /// </remarks>
-    public User? User { get; set; }
+    public User User { get; set; } = null!;
 }
