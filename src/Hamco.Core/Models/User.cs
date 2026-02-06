@@ -117,6 +117,41 @@ public class User
     public List<string> Roles { get; set; } = new();
     
     /// <summary>
+    /// Indicates whether the user's email address has been verified.
+    /// </summary>
+    /// <remarks>
+    /// Email verification flow (future Mailjet integration):
+    /// 1. User registers → IsEmailVerified = false
+    /// 2. Send verification email with unique token
+    /// 3. User clicks link → validate token → set IsEmailVerified = true
+    /// 
+    /// Security: Unverified users could be restricted from certain actions
+    /// (e.g., posting notes, changing sensitive settings)
+    /// 
+    /// Default: false (users must verify email)
+    /// </remarks>
+    public bool IsEmailVerified { get; set; } = false;
+    
+    /// <summary>
+    /// Indicates whether the user has administrator privileges.
+    /// </summary>
+    /// <remarks>
+    /// Admin users can:
+    /// - Create/edit/delete any notes (including other users' notes)
+    /// - Manage user accounts
+    /// - Access admin-only endpoints
+    /// 
+    /// First registered user should automatically be admin.
+    /// Additional admins can be promoted via admin panel or database.
+    /// 
+    /// This field will be stored in database and also included in JWT claims
+    /// for quick authorization checks without database lookup.
+    /// 
+    /// Default: false (normal user)
+    /// </remarks>
+    public bool IsAdmin { get; set; } = false;
+    
+    /// <summary>
     /// UTC timestamp when this user account was created.
     /// </summary>
     /// <remarks>

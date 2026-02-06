@@ -569,4 +569,106 @@ public class NotesControllerTests : IClassFixture<WebApplicationFactory<Program>
         // ASSERT: Should return 404
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    // ============================================================================
+    // AUTHENTICATION TESTS
+    // ============================================================================
+
+    /// <summary>
+    /// Test: Creating note without authentication returns 401 Unauthorized.
+    /// </summary>
+    [Fact]
+    public async Task CreateNote_Unauthenticated_Returns401()
+    {
+        // ARRANGE
+        var createNoteRequest = new CreateNoteRequest
+        {
+            Title = "Unauthorized Note",
+            Content = "This should fail"
+        };
+
+        // ACT: POST without Authorization header
+        var response = await _client.PostAsJsonAsync("/api/notes", createNoteRequest);
+
+        // ASSERT: Should return 401 Unauthorized
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Test: Non-admin user cannot create notes (returns 403 Forbidden).
+    /// </summary>
+    [Fact]
+    public async Task CreateNote_NonAdmin_Returns403()
+    {
+        // ARRANGE: Register a regular (non-admin) user
+        var registerRequest = new RegisterRequest
+        {
+            Username = "RegularUser",
+            Email = $"regular_{Guid.NewGuid()}@example.com",
+            Password = "Password123"
+        };
+        
+        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", registerRequest);
+        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponse>();
+        Assert.NotNull(authResponse);
+
+        // Create authenticated client
+        var authenticatedClient = _factory.CreateClient();
+        authenticatedClient.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse.Token);
+
+        var createNoteRequest = new CreateNoteRequest
+        {
+            Title = "Non-Admin Note",
+            Content = "Regular user trying to post"
+        };
+
+        // ACT: POST with non-admin token
+        var response = await authenticatedClient.PostAsJsonAsync("/api/notes", createNoteRequest);
+
+        // ASSERT: Should return 403 Forbidden (not admin)
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Test: Admin user CAN create notes (returns 201 Created).
+    /// </summary>
+    [Fact]
+    public async Task CreateNote_AdminUser_Returns201()
+    {
+        // ARRANGE: Register first user (should be admin automatically)
+        var uniqueEmail = $"admin_{Guid.NewGuid()}@example.com";
+        var registerRequest = new RegisterRequest
+        {
+            Username = "AdminUser",
+            Email = uniqueEmail,
+            Password = "AdminPass123"
+        };
+        
+        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", registerRequest);
+        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponse>();
+        Assert.NotNull(authResponse);
+
+        // Create authenticated client
+        var authenticatedClient = _factory.CreateClient();
+        authenticatedClient.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse.Token);
+
+        var createNoteRequest = new CreateNoteRequest
+        {
+            Title = "Admin Note",
+            Content = "Admin user posting"
+        };
+
+        // ACT: POST with admin token
+        var response = await authenticatedClient.PostAsJsonAsync("/api/notes", createNoteRequest);
+
+        // ASSERT: Should return 201 Created
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        
+        // Verify note was created with user ID
+        var note = await response.Content.ReadFromJsonAsync<NoteResponse>();
+        Assert.NotNull(note);
+        Assert.Equal("Admin Note", note.Title);
+    }
 }
