@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Hamco.Core.Models;
 using Hamco.Core.Utilities;
 using Hamco.Data;
@@ -46,5 +47,50 @@ public class NotesController : ControllerBase
         };
 
         return CreatedAtAction(nameof(CreateNote), new { id = note.Id }, response);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<NoteResponse>> GetNote(int id)
+    {
+        var note = await _context.Notes.FindAsync(id);
+
+        if (note == null || note.DeletedAt != null)
+        {
+            return NotFound();
+        }
+
+        var response = new NoteResponse
+        {
+            Id = note.Id,
+            Title = note.Title,
+            Slug = note.Slug,
+            Content = note.Content,
+            UserId = note.UserId,
+            CreatedAt = note.CreatedAt,
+            UpdatedAt = note.UpdatedAt
+        };
+
+        return Ok(response);
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<List<NoteResponse>>> GetNotes()
+    {
+        var notes = await _context.Notes
+            .Where(n => n.DeletedAt == null)
+            .ToListAsync();
+
+        var response = notes.Select(note => new NoteResponse
+        {
+            Id = note.Id,
+            Title = note.Title,
+            Slug = note.Slug,
+            Content = note.Content,
+            UserId = note.UserId,
+            CreatedAt = note.CreatedAt,
+            UpdatedAt = note.UpdatedAt
+        }).ToList();
+
+        return Ok(response);
     }
 }
