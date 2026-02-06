@@ -1,7 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using Hamco.Data;
 using Hamco.Core.Extensions;
 
@@ -20,28 +17,12 @@ builder.Services.AddDbContext<HamcoDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 // Configure JWT Authentication
+// Configure JWT Authentication using AddAuthServices extension
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "your-very-secret-key-that-is-at-least-32-characters-long";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "hamco-api";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "hamco-client";
 
 builder.Services.AddAuthServices(jwtKey, jwtIssuer, jwtAudience);
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-        };
-    });
-
-builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
