@@ -215,4 +215,58 @@ public class NotesControllerTests : IClassFixture<WebApplicationFactory<Program>
         // Assert - 400 BadRequest
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    // ==================== DELETE TESTS ====================
+
+    [Fact]
+    public async Task DeleteNote_ExistingId_RemovesNote()
+    {
+        // Arrange - Create 3 notes, get IDs
+        var note1 = await _client.PostAsJsonAsync("/api/notes", new CreateNoteRequest { Title = "Note 1", Content = "Content 1" });
+        var note2 = await _client.PostAsJsonAsync("/api/notes", new CreateNoteRequest { Title = "Note 2", Content = "Content 2" });
+        var note3 = await _client.PostAsJsonAsync("/api/notes", new CreateNoteRequest { Title = "Note 3", Content = "Content 3" });
+        
+        var created1 = await note1.Content.ReadFromJsonAsync<NoteResponse>();
+        var created2 = await note2.Content.ReadFromJsonAsync<NoteResponse>();
+        var created3 = await note3.Content.ReadFromJsonAsync<NoteResponse>();
+        
+        Assert.NotNull(created1);
+        Assert.NotNull(created2);
+        Assert.NotNull(created3);
+
+        // Verify all 3 exist
+        var allNotesBefore = await _client.GetAsync("/api/notes");
+        var notesBefore = await allNotesBefore.Content.ReadFromJsonAsync<List<NoteResponse>>();
+        Assert.NotNull(notesBefore);
+        var beforeCount = notesBefore.Count;
+
+        // Act - DELETE /api/notes/{id} (delete middle one)
+        var deleteResponse = await _client.DeleteAsync($"/api/notes/{created2.Id}");
+
+        // Assert - 204 NoContent
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        // Verify - GET /api/notes returns only 2 of our notes (deleted one gone)
+        var allNotesAfter = await _client.GetAsync("/api/notes");
+        var notesAfter = await allNotesAfter.Content.ReadFromJsonAsync<List<NoteResponse>>();
+        Assert.NotNull(notesAfter);
+        Assert.Equal(beforeCount - 1, notesAfter.Count); // One less note
+        Assert.DoesNotContain(notesAfter, n => n.Id == created2.Id); // Deleted note not in list
+        Assert.Contains(notesAfter, n => n.Id == created1.Id); // Other notes still there
+        Assert.Contains(notesAfter, n => n.Id == created3.Id);
+
+        // Verify - GET /api/notes/{deletedId} returns 404
+        var getDeletedNote = await _client.GetAsync($"/api/notes/{created2.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, getDeletedNote.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteNote_NonExistingId_Returns404()
+    {
+        // Act - DELETE /api/notes/99999
+        var response = await _client.DeleteAsync("/api/notes/99999");
+
+        // Assert - 404 NotFound
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }
