@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using Hamco.Core.Models;
 using Hamco.Core.Services;
 using Hamco.Data;
@@ -158,12 +160,12 @@ public class AuthController : ControllerBase
         // Performance: Uses EXISTS (stops at first match, efficient)
         if (await _context.Users.AnyAsync(u => u.Email == request.Email))
         {
-            // Email exists, return error
-            // BadRequest() returns 400 status code
+            // Email exists, return 409 Conflict (more semantically correct than 400)
+            // Conflict() returns 409 status code
             // Anonymous object: new { property = value }
             //   Creates object with 'message' property
             //   Serialized to JSON: {"message":"Email already exists"}
-            return BadRequest(new { message = "Email already exists" });
+            return Conflict(new { message = "Email already exists" });
         }
 
         // Step 2: Create new user entity
@@ -198,17 +200,16 @@ public class AuthController : ControllerBase
         // See JwtService.GenerateToken() for details
         var token = _jwtService.GenerateToken(user);
 
-        // Step 6: Return authentication response
-        // ⚠️ BUG: Roles and ExpiresAt not populated!
-        // Should add:
-        //   Roles = user.Roles,
-        //   ExpiresAt = DateTime.UtcNow.AddMinutes(60)
-        return Ok(new AuthResponse
+        // Step 6: Return 201 Created with authentication response
+        // CreatedAtAction returns 201 with Location header pointing to resource
+        // For auth endpoints, we return the response directly (no specific GET endpoint)
+        return CreatedAtAction(nameof(Register), new AuthResponse
         {
             Token = token,
             UserId = user.Id,
-            Email = user.Email
-            // TODO: Add Roles and ExpiresAt
+            Email = user.Email,
+            Roles = user.Roles,  // Empty list by default
+            ExpiresAt = DateTime.UtcNow.AddMinutes(60)  // Token expires in 60 minutes
         });
     }
 
@@ -323,13 +324,136 @@ public class AuthController : ControllerBase
 
         // Step 4: Return authentication response
         // Same response as Register (consistent API)
-        // ⚠️ Same bug: Roles and ExpiresAt not populated
         return Ok(new AuthResponse
         {
             Token = token,
             UserId = user.Id,
-            Email = user.Email
-            // TODO: Add Roles and ExpiresAt
+            Email = user.Email,
+            Roles = user.Roles,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(60)
+        });
+    }
+
+    /// <summary>
+    /// Gets the profile of the currently authenticated user.
+    /// </summary>
+    /// <returns>
+    /// 200 OK with user profile if authenticated.
+    /// 401 Unauthorized if not authenticated.
+    /// </returns>
+    /// <remarks>
+    /// HTTP Method: GET /api/auth/profile
+    /// 
+    /// Requires: Authorization: Bearer {token} header
+    /// 
+    /// This endpoint demonstrates JWT authentication:
+    /// 1. Client sends JWT token in Authorization header
+    /// 2. JWT middleware validates token signature
+    /// 3. If valid, extracts user claims from token
+    /// 4. Makes user identity available via User property
+    /// 5. Controller extracts user ID from claims
+    /// 6. Looks up full user data from database
+    /// 7. Returns user profile (excluding password hash)
+    /// 
+    /// Security: Password hash is NEVER returned in API responses!
+    /// </remarks>
+    [HttpGet("profile")]  // Route: GET /api/auth/profile
+    [Authorize]  // Requires valid JWT token
+    public async Task<ActionResult<AuthResponse>> GetProfile()
+    {
+        // Extract user ID from JWT token claims
+        // User.FindFirst() looks for claim by type
+        // ClaimTypes.NameIdentifier = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"
+        // This is where we store the user ID in JwtService.GenerateToken()
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        if (string.IsNullOrEmpty(userIdClaim))
+        {
+            // Token is valid but doesn't contain user ID claim (shouldn't happen)
+            return Unauthorized(new { message = "Invalid token claims" });
+        }
+
+        // Look up user in database by ID
+        var user = await _context.Users.FindAsync(userIdClaim);
+        
+        if (user == null)
+        {
+            // User was deleted after token was issued
+            return Unauthorized(new { message = "User not found" });
+        }
+
+        // Return user profile (same format as login/register for consistency)
+        // Password hash is NOT included!
+        return Ok(new AuthResponse
+        {
+            Token = string.Empty,  // Don't issue new token on profile request
+            UserId = user.Id,
+            Email = user.Email,
+            Roles = user.Roles,
+            ExpiresAt = DateTime.MinValue  // Client should use existing token expiry
+        });
+    }
+
+    /// <summary>
+    /// Stub endpoint for forgot password (future Mailjet integration).
+    /// </summary>
+    /// <param name="request">Email address to send reset link to.</param>
+    /// <returns>200 OK with message about future implementation.</returns>
+    /// <remarks>
+    /// HTTP Method: POST /api/auth/forgot-password
+    /// 
+    /// Future implementation with Mailjet:
+    /// 1. Validate email exists in database
+    /// 2. Generate secure reset token (GUID or signed JWT)
+    /// 3. Store token in database with expiration (e.g., 1 hour)
+    /// 4. Send email via Mailjet with reset link
+    /// 5. Link contains token: /reset-password?token=xxx
+    /// 6. Return success message (don't reveal if email exists!)
+    /// 
+    /// Security: Always return success even if email doesn't exist
+    /// (prevents email enumeration attacks)
+    /// </remarks>
+    [HttpPost("forgot-password")]
+    public IActionResult ForgotPassword([FromBody] dynamic request)
+    {
+        // Stub implementation - always returns success
+        // In production, send password reset email via Mailjet
+        return Ok(new 
+        { 
+            message = "Password reset email sent (not implemented yet). " +
+                      "Future: Will integrate with Mailjet to send reset link."
+        });
+    }
+
+    /// <summary>
+    /// Stub endpoint for reset password (future Mailjet integration).
+    /// </summary>
+    /// <param name="request">Reset token and new password.</param>
+    /// <returns>200 OK with message about future implementation.</returns>
+    /// <remarks>
+    /// HTTP Method: POST /api/auth/reset-password
+    /// 
+    /// Future implementation:
+    /// 1. Validate reset token from database
+    /// 2. Check token hasn't expired
+    /// 3. Hash new password with BCrypt
+    /// 4. Update user's password hash
+    /// 5. Invalidate reset token
+    /// 6. Optionally send confirmation email
+    /// 7. Return success message
+    /// 
+    /// Security: Use constant-time token comparison
+    /// Invalidate token after use (one-time use only)
+    /// </remarks>
+    [HttpPost("reset-password")]
+    public IActionResult ResetPassword([FromBody] dynamic request)
+    {
+        // Stub implementation
+        // In production, validate token and update password
+        return Ok(new 
+        { 
+            message = "Password reset (not implemented yet). " +
+                      "Future: Will validate token and update password hash."
         });
     }
 }

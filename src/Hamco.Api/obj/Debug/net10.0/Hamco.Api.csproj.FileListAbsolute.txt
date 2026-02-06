@@ -181,3 +181,4 @@
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/tr/Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/zh-Hans/Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/zh-Hant/Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/obj/Debug/net10.0/Hamco.Api.sourcelink.json

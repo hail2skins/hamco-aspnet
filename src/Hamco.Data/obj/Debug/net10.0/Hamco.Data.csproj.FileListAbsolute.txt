@@ -61,3 +61,4 @@
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Data/bin/Debug/net10.0/BuildHost-netcore/tr/System.CommandLine.resources.dll
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Data/bin/Debug/net10.0/BuildHost-netcore/zh-Hans/System.CommandLine.resources.dll
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Data/bin/Debug/net10.0/BuildHost-netcore/zh-Hant/System.CommandLine.resources.dll
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Data/obj/Debug/net10.0/Hamco.Data.sourcelink.json

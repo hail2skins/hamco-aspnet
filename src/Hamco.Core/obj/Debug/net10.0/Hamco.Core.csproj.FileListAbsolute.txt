@@ -10,3 +10,4 @@
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/obj/Debug/net10.0/refint/Hamco.Core.dll
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/obj/Debug/net10.0/Hamco.Core.pdb
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/obj/Debug/net10.0/ref/Hamco.Core.dll
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Core/obj/Debug/net10.0/Hamco.Core.sourcelink.json
