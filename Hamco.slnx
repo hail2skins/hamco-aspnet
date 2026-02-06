@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Hamco.Api/Hamco.Api.csproj" />
+    <Project Path="src/Hamco.Core/Hamco.Core.csproj" />
+    <Project Path="src/Hamco.Data/Hamco.Data.csproj" />
+    <Project Path="src/Hamco.Services/Hamco.Services.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Hamco.Api.Tests/Hamco.Api.Tests.csproj" />
+    <Project Path="tests/Hamco.Core.Tests/Hamco.Core.Tests.csproj" />
+  </Folder>
+</Solution>
