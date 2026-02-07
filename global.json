@@ -7,8 +7,5 @@
   ],
   "build": [
     "dotnet publish -c Release -o out"
-  ],
-  "start": [
-    " ./out/Hamco.Api"
- ]
+  ]
 }
