@@ -69,18 +69,24 @@ public class NoteResponse
     public string Content { get; set; } = string.Empty;
     
     /// <summary>
-    /// ID of the user who created this note. Null for anonymous notes.
+    /// ID of the user who created this note.
     /// </summary>
     /// <remarks>
-    /// Currently always null (authentication not enforced).
+    /// This field is now REQUIRED (not nullable) because authentication
+    /// is enforced on note creation. Every note must have an owner.
     /// 
-    /// When authentication is enabled, this will contain the user ID
-    /// extracted from the JWT token.
+    /// The UserId is extracted from the JWT token when the note is created:
+    ///   var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    ///   note.UserId = userId;
+    /// 
+    /// This prevents anonymous posting and creates an audit trail.
     /// 
     /// Security consideration: Exposing UserId allows tracking who wrote what.
     /// In a multi-user system, consider privacy implications!
+    /// 
+    /// Example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     /// </remarks>
-    public string? UserId { get; set; }
+    public string UserId { get; set; } = string.Empty;
     
     /// <summary>
     /// UTC timestamp when this note was created.

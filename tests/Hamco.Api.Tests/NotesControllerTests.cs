@@ -1,18 +1,92 @@
 using System.Net;
 using System.Net.Http.Json;
 using Hamco.Core.Models;
+using Hamco.Data;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Hamco.Api.Tests;
 
 /// <summary>
-/// Collection definition to run notes tests sequentially (not in parallel).
-/// Prevents race conditions with shared admin user creation.
+/// Custom WebApplicationFactory that provides an isolated SQLite in-memory database for each test.
+/// This prevents race conditions and database pollution between tests.
 /// </summary>
-[CollectionDefinition("NotesTests", DisableParallelization = true)]
-public class NotesTestsCollection
+/// <remarks>
+/// CLEAN APPROACH: Program.cs checks environment and registers appropriate provider.
+/// 
+/// When environment = "Testing":
+///   - Program.cs registers SQLite provider (not Npgsql)
+///   - No provider conflicts (SQLite registered from the start)
+///   - Each test instance gets isolated in-memory database
+/// 
+/// When environment = "Development" or "Production":
+///   - Program.cs registers Npgsql provider
+///   - Connects to real PostgreSQL database
+/// 
+/// This factory just sets the environment and manages the SQLite connection lifetime.
+/// The actual provider registration happens in Program.cs based on the environment.
+/// </remarks>
+public class TestWebApplicationFactory : WebApplicationFactory<Program>, IDisposable
 {
+    private SqliteConnection? _connection;
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        // Set environment to "Testing" so Program.cs registers SQLite instead of Npgsql
+        builder.UseEnvironment("Testing");
+        
+        builder.ConfigureServices(services =>
+        {
+            // Create and open an SQLite in-memory connection
+            // Keep it open for the lifetime of the test to persist the schema
+            // 
+            // Important: In-memory SQLite databases are destroyed when connection closes!
+            // We must keep the connection open for entire test lifetime.
+            // 
+            // Program.cs will use "DataSource=:memory:" connection string,
+            // but we override it here to use our long-lived connection.
+            // This ensures the schema persists across multiple DbContext instances
+            // within the same test.
+            
+            // Remove the DbContext registration that Program.cs added
+            var dbContextDescriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(DbContextOptions<HamcoDbContext>));
+
+            if (dbContextDescriptor != null)
+            {
+                services.Remove(dbContextDescriptor);
+            }
+
+            // Create persistent connection for this test instance
+            _connection = new SqliteConnection("DataSource=:memory:");
+            _connection.Open();
+
+            // Re-register DbContext with our persistent connection
+            services.AddDbContext<HamcoDbContext>(options =>
+            {
+                options.UseSqlite(_connection);
+            });
+            
+            // Build service provider and ensure database is created
+            var serviceProvider = services.BuildServiceProvider();
+            using (var scope = serviceProvider.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<HamcoDbContext>();
+                db.Database.EnsureCreated(); // Create schema synchronously
+            }
+        });
+    }
+
+    public new void Dispose()
+    {
+        _connection?.Close();
+        _connection?.Dispose();
+        base.Dispose();
+    }
 }
 
 /// <summary>
@@ -20,8 +94,11 @@ public class NotesTestsCollection
 /// Tests the correct behavior: Admin-only write, public read.
 /// </summary>
 /// <remarks>
-/// [Collection("NotesTests")] ensures tests run sequentially, not in parallel.
-/// This prevents race conditions when creating the shared admin user.
+/// ISOLATED DATABASE PER TEST:
+/// Each test creates its own TestWebApplicationFactory with an isolated SQLite in-memory database.
+/// This prevents race conditions and database pollution between tests running in parallel.
+/// 
+/// The test factory must be disposed after each test to release the SQLite connection.
 /// 
 /// VALID TEST COVERAGE (Art's specification):
 /// 
@@ -39,31 +116,43 @@ public class NotesTestsCollection
 /// Old CRUD tests that expected unauthenticated write access were DELETED.
 /// Those tests tested invalid behavior (anonymous posting).
 /// </remarks>
-[Collection("NotesTests")]
-public class NotesControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class NotesControllerTests : IDisposable
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestWebApplicationFactory _factory;
     private readonly HttpClient _client;
 
-    public NotesControllerTests(WebApplicationFactory<Program> factory)
+    public NotesControllerTests()
     {
-        _factory = factory;
-        _client = factory.CreateClient();
+        // Create a NEW factory for EACH test instance
+        // This ensures complete database isolation between tests
+        _factory = new TestWebApplicationFactory();
+        _client = _factory.CreateClient();
+    }
+    
+    public void Dispose()
+    {
+        _client?.Dispose();
+        _factory?.Dispose();
     }
 
     /// <summary>
     /// Helper: Gets authenticated admin client.
     /// </summary>
     /// <remarks>
-    /// Since tests run sequentially (Collection attribute), we can safely
-    /// create a new admin user for each test without worrying about race conditions.
-    /// The first user registered will be admin; subsequent tests will register new users.
+    /// Since each test instance has its own isolated database,
+    /// we can safely register admin@test.com as the first user,
+    /// which automatically gets admin privileges.
     /// </remarks>
     private async Task<HttpClient> GetAuthenticatedAdminClientAsync()
     {
-        // For simplicity in sequential tests, just use admin@test.com
-        // If it already exists, we'll get an error, but that's fine
-        // Try to register, but if email exists, just login instead
+        // Ensure database schema is created (first call only, subsequent calls are no-op)
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<HamcoDbContext>();
+            await db.Database.EnsureCreatedAsync();
+        }
+        
+        // Register admin user (will be first user in fresh database, gets admin=true)
         var registerRequest = new RegisterRequest
         {
             Username = "AdminUser",
@@ -73,28 +162,16 @@ public class NotesControllerTests : IClassFixture<WebApplicationFactory<Program>
         
         var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", registerRequest);
         
-        AuthResponse? authResponse;
-        if (registerResponse.StatusCode == HttpStatusCode.Created)
-        {
-            // Successfully registered
-            authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponse>();
-        }
-        else
-        {
-            // User already exists, login instead
-            var loginRequest = new LoginRequest
-            {
-                Email = "admin@test.com",
-                Password = "AdminPass123"
-            };
-            var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
-            authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>();
-        }
+        // Should always succeed with 201 Created since database is fresh
+        Assert.Equal(HttpStatusCode.Created, registerResponse.StatusCode);
+        
+        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponse>();
+        Assert.NotNull(authResponse);
         
         // Create authenticated client with Bearer token
         var authenticatedClient = _factory.CreateClient();
         authenticatedClient.DefaultRequestHeaders.Authorization = 
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse.Token);
         
         return authenticatedClient;
     }
@@ -145,7 +222,10 @@ public class NotesControllerTests : IClassFixture<WebApplicationFactory<Program>
     [Fact]
     public async Task CreateNote_NonAdmin_Returns403()
     {
-        // ARRANGE - Register second user (not admin)
+        // ARRANGE - Get admin first (they're the first user)
+        await GetAuthenticatedAdminClientAsync();
+        
+        // Register second user (not admin)
         var registerRequest = new RegisterRequest
         {
             Username = "RegularUser",

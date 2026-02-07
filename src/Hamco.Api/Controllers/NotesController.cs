@@ -10,30 +10,49 @@ namespace Hamco.Api.Controllers;
 
 /// <summary>
 /// API controller for managing blog notes (posts).
-/// Provides CRUD (Create, Read, Update, Delete) operations.
+/// Provides CRUD (Create, Read, Update, Delete) operations with role-based authorization.
 /// </summary>
 /// <remarks>
 /// REST API endpoints:
-///   POST   /api/notes      - Create new note
-///   GET    /api/notes/{id} - Get single note by ID
-///   GET    /api/notes      - Get all notes
-///   PUT    /api/notes/{id} - Update existing note
-///   DELETE /api/notes/{id} - Delete note (hard delete)
+///   POST   /api/notes      - Create new note (Admin only)
+///   GET    /api/notes/{id} - Get single note by ID (Public)
+///   GET    /api/notes      - Get all notes (Public)
+///   PUT    /api/notes/{id} - Update existing note (Admin only)
+///   DELETE /api/notes/{id} - Delete note (Admin only)
 /// 
-/// Controller in ASP.NET Core:
-///   - Handles HTTP requests
-///   - Validates input (automatic via Data Annotations)
-///   - Calls business logic / database operations
-///   - Returns HTTP responses
+/// Authorization Model - Blog-Style Architecture:
 /// 
-/// Attributes explained:
-///   [ApiController]: Enables API-specific behaviors (auto model validation, etc.)
-///   [Route]: Defines base URL pattern for all actions in this controller
+///   PUBLIC READ (No authentication required):
+///     - GET /api/notes/{id} - Anyone can read a specific note
+///     - GET /api/notes      - Anyone can list all notes
+///     
+///     Why public read? Blog content should be accessible to everyone.
+///     This enables SEO, social sharing, and open access to information.
 /// 
-/// ControllerBase vs Controller:
-///   - ControllerBase: For APIs (no View support)
-///   - Controller: For MVC (includes View rendering)
-///   We use ControllerBase because this is a pure API (no HTML views)
+///   ADMIN-ONLY WRITE (Authentication + Admin role required):
+///     - POST   /api/notes      - Only admins can create notes
+///     - PUT    /api/notes/{id} - Only admins can edit notes
+///     - DELETE /api/notes/{id} - Only admins can delete notes
+///     
+///     Why admin-only write? Content management requires elevated privileges.
+///     This prevents spam, vandalism, and unauthorized content changes.
+/// 
+///   How to become admin:
+///     - The FIRST user registered automatically becomes admin (IsAdmin = true)
+///     - Subsequent users are regular users (IsAdmin = false)
+///     - Additional admins can be promoted via database if needed
+/// 
+/// Controller Design:
+///   - [ApiController]: Enables API-specific behaviors (auto model validation)
+///   - [Route]: Defines base URL pattern for all actions
+///   - No [Authorize] at class level: GET endpoints are intentionally public
+///   - Individual POST/PUT/DELETE methods have [Authorize(Roles = "Admin")]
+/// 
+/// Real-world analogy:
+///   Think of a newspaper website:
+///   - Anyone can read articles (public GET)
+///   - Only journalists can publish (admin POST)
+///   - Only editors can modify articles (admin PUT/DELETE)
 /// 
 /// Async/await pattern:
 ///   All methods use 'async Task' for non-blocking I/O operations.
@@ -81,7 +100,7 @@ public class NotesController : ControllerBase
     }
 
     /// <summary>
-    /// Creates a new blog note.
+    /// Creates a new blog note. Requires admin authentication.
     /// </summary>
     /// <param name="request">
     /// Note creation data (title and content).
@@ -89,10 +108,20 @@ public class NotesController : ControllerBase
     /// </param>
     /// <returns>
     /// 201 Created with note data if successful.
+    /// 401 Unauthorized if not authenticated.
+    /// 403 Forbidden if authenticated but not admin.
     /// 400 Bad Request if validation fails.
     /// </returns>
     /// <remarks>
     /// HTTP Method: POST /api/notes
+    /// 
+    /// ⚠️ AUTHORIZATION REQUIRED: Admin role only
+    /// 
+    /// To call this endpoint:
+    /// 1. Register or login as the first user (becomes admin automatically)
+    /// 2. Include JWT token in Authorization header:
+    ///    Authorization: Bearer {your_jwt_token}
+    /// 3. Token must belong to a user with IsAdmin = true
     /// 
     /// Request body (JSON):
     /// {
@@ -106,7 +135,7 @@ public class NotesController : ControllerBase
     ///   "title": "My First Post",
     ///   "slug": "my-first-post",
     ///   "content": "This is the content...",
-    ///   "userId": null,
+    ///   "userId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     ///   "createdAt": "2026-02-06T14:30:00Z",
     ///   "updatedAt": "2026-02-06T14:30:00Z"
     /// }
@@ -115,11 +144,22 @@ public class NotesController : ControllerBase
     ///   - Maps this method to HTTP POST requests
     ///   - Combined with route: POST /api/notes
     /// 
-    /// async Task&lt;ActionResult&lt;NoteResponse&gt;&gt; explained:
+    /// [Authorize(Roles = "Admin")] attribute:
+    ///   - Requires valid JWT token (authentication)
+    ///   - Requires "Admin" role in token claims (authorization)
+    ///   - Returns 401 if no token or invalid token
+    ///   - Returns 403 if token valid but user not admin
+    /// 
+    /// How user ID is determined:
+    ///   - Extracted from JWT token claims (ClaimTypes.NameIdentifier)
+    ///   - NOT provided in request body (prevent spoofing)
+    ///   - Ensures note is linked to authenticated user
+    /// 
+    /// async Task<ActionResult<NoteResponse>> explained:
     ///   - 'async': Method can use 'await' for async operations
     ///   - 'Task': Represents asynchronous operation
     ///   - 'ActionResult': Base type for all action results (OK, NotFound, etc.)
-    ///   - 'ActionResult&lt;NoteResponse&gt;': Can return NoteResponse or any ActionResult
+    ///   - 'ActionResult<NoteResponse>': Can return NoteResponse or any ActionResult
     /// 
     /// Model binding:
     ///   ASP.NET Core automatically deserializes JSON body to CreateNoteRequest.
@@ -130,6 +170,12 @@ public class NotesController : ControllerBase
     ///   Returns 201 Created status code (standard for resource creation).
     ///   Includes Location header: /api/notes/1 (URL of created resource).
     ///   Follows REST conventions (POST should return created resource).
+    /// 
+    /// Security considerations:
+    ///   ✅ User ID from JWT token (can't forge ownership)
+    ///   ✅ Admin-only access (prevents spam/unauthorized content)
+    ///   ✅ Input validation (prevents XSS, injection attacks)
+    ///   ⚠️ No content sanitization (should validate HTML/markdown)
     /// </remarks>
     [HttpPost]
     [Authorize(Roles = "Admin")]  // Only administrators can create notes
@@ -216,7 +262,7 @@ public class NotesController : ControllerBase
     }
 
     /// <summary>
-    /// Retrieves a single note by ID.
+    /// Retrieves a single note by ID. Public access - no authentication required.
     /// </summary>
     /// <param name="id">The unique identifier of the note to retrieve.</param>
     /// <returns>
@@ -226,17 +272,39 @@ public class NotesController : ControllerBase
     /// <remarks>
     /// HTTP Method: GET /api/notes/{id}
     /// 
+    /// ✅ PUBLIC ENDPOINT - No authentication required!
+    /// 
+    /// This endpoint is intentionally public to allow:
+    ///   - Anyone to read blog posts (SEO-friendly)
+    ///   - Social sharing without login barriers
+    ///   - Open access to published content
+    /// 
     /// Example: GET /api/notes/1
+    /// 
+    /// Response (200 OK):
+    /// {
+    ///   "id": 1,
+    ///   "title": "My Blog Post",
+    ///   "slug": "my-blog-post",
+    ///   "content": "Content here...",
+    ///   "userId": "a1b2c3d4-...",
+    ///   "createdAt": "2026-02-06T14:30:00Z",
+    ///   "updatedAt": "2026-02-06T14:30:00Z"
+    /// }
+    /// 
+    /// Response (404 Not Found):
+    ///   Returned if note doesn't exist
+    ///   Also returned if note was deleted (soft delete, when implemented)
     /// 
     /// Route parameter:
     ///   {id} in [HttpGet("{id}")] matches 'int id' parameter
     ///   ASP.NET Core automatically converts URL string to int
     ///   If conversion fails (e.g., GET /api/notes/abc), returns 400 Bad Request
     /// 
-    /// Soft delete handling:
-    ///   Even though note exists in database, we return 404 if DeletedAt is set.
-    ///   This hides deleted notes from API consumers.
-    ///   ⚠️ Current implementation uses hard delete, so this check is preparatory.
+    /// Why no [Authorize] attribute?
+    ///   - Blogs are typically readable by everyone
+    ///   - No sensitive information in published posts
+    ///   - Improves accessibility and SEO
     /// 
     /// FindAsync() vs FirstOrDefaultAsync():
     ///   FindAsync: Fast lookup by primary key (uses EF Core cache)
@@ -282,7 +350,7 @@ public class NotesController : ControllerBase
     }
 
     /// <summary>
-    /// Retrieves all notes (excludes soft-deleted notes).
+    /// Retrieves all notes (excludes soft-deleted notes). Public access - no authentication required.
     /// </summary>
     /// <returns>
     /// 200 OK with array of note data.
@@ -291,11 +359,39 @@ public class NotesController : ControllerBase
     /// <remarks>
     /// HTTP Method: GET /api/notes
     /// 
+    /// ✅ PUBLIC ENDPOINT - No authentication required!
+    /// 
+    /// This endpoint is intentionally public to allow:
+    ///   - Anyone to browse all blog posts
+    ///   - RSS feed readers to access content
+    ///   - Search engines to index posts (SEO)
+    ///   - Frontend SPAs to display posts without login
+    /// 
     /// Response (200 OK):
     /// [
-    ///   { "id": 1, "title": "First Post", ... },
-    ///   { "id": 2, "title": "Second Post", ... }
+    ///   { 
+    ///     "id": 1, 
+    ///     "title": "First Post", 
+    ///     "slug": "first-post",
+    ///     "content": "Content...",
+    ///     "userId": "a1b2c3d4-...",
+    ///     "createdAt": "2026-02-06T14:30:00Z",
+    ///     "updatedAt": "2026-02-06T14:30:00Z"
+    ///   },
+    ///   { 
+    ///     "id": 2, 
+    ///     "title": "Second Post",
+    ///     "slug": "second-post", 
+    ///     ...
+    ///   }
     /// ]
+    /// 
+    /// Returns empty array [] if no notes exist (not an error).
+    /// 
+    /// Why public access for listing?
+    ///   - Blog homepages typically show all posts
+    ///   - No sensitive data in published posts
+    ///   - Consistent with public GET /api/notes/{id}
     /// 
     /// LINQ query:
     ///   _context.Notes.Where(...).ToListAsync()
@@ -315,7 +411,7 @@ public class NotesController : ControllerBase
     ///   - Skip/Take for offset-based pagination
     ///   - Cursor-based pagination for better performance
     ///   
-    /// Future improvement: GET /api/notes?page=1&pageSize=20
+    /// Future improvement: GET /api/notes?page=1&amp;pageSize=20
     /// </remarks>
     [HttpGet]  // Route: GET /api/notes (no parameters)
     public async Task<ActionResult<List<NoteResponse>>> GetNotes()
@@ -376,7 +472,7 @@ public class NotesController : ControllerBase
     }
 
     /// <summary>
-    /// Updates an existing note's title and content.
+    /// Updates an existing note's title and content. Requires admin authentication.
     /// </summary>
     /// <param name="id">The unique identifier of the note to update.</param>
     /// <param name="request">
@@ -385,13 +481,25 @@ public class NotesController : ControllerBase
     /// </param>
     /// <returns>
     /// 200 OK with updated note data if successful.
+    /// 401 Unauthorized if not authenticated.
+    /// 403 Forbidden if authenticated but not admin.
     /// 404 Not Found if note doesn't exist or was deleted.
     /// 400 Bad Request if validation fails.
     /// </returns>
     /// <remarks>
     /// HTTP Method: PUT /api/notes/{id}
     /// 
+    /// ⚠️ AUTHORIZATION REQUIRED: Admin role only
+    /// 
+    /// To call this endpoint:
+    /// 1. Must be authenticated with valid JWT token
+    /// 2. User must have admin role (IsAdmin = true)
+    /// 3. Include token in Authorization header
+    /// 
     /// Request: PUT /api/notes/1
+    /// Authorization: Bearer {admin_token}
+    /// Content-Type: application/json
+    /// 
     /// Body:
     /// {
     ///   "title": "Updated Title",
@@ -404,7 +512,7 @@ public class NotesController : ControllerBase
     ///   "title": "Updated Title",
     ///   "slug": "updated-title",  ← Regenerated from new title!
     ///   "content": "Updated content...",
-    ///   "userId": null,
+    ///   "userId": "a1b2c3d4-...",
     ///   "createdAt": "2026-02-06T14:30:00Z",
     ///   "updatedAt": "2026-02-06T15:45:00Z"  ← Updated timestamp
     /// }
@@ -425,6 +533,11 @@ public class NotesController : ControllerBase
     ///   When title changes, we regenerate slug to keep them in sync.
     ///   Trade-off: Breaks existing URLs if title changes!
     ///   Alternative: Allow manual slug editing, separate from title.
+    /// 
+    /// Why admin-only?
+    ///   - Prevents unauthorized edits to published content
+    ///   - Ensures content quality control
+    ///   - Creates clear audit trail (who modified what)
     /// </remarks>
     [HttpPut("{id}")]  // Route: PUT /api/notes/123
     [Authorize(Roles = "Admin")]  // Only administrators can update notes
@@ -475,17 +588,27 @@ public class NotesController : ControllerBase
     }
 
     /// <summary>
-    /// Deletes a note from the database (hard delete).
+    /// Deletes a note from the database (hard delete). Requires admin authentication.
     /// </summary>
     /// <param name="id">The unique identifier of the note to delete.</param>
     /// <returns>
     /// 204 No Content if successful.
+    /// 401 Unauthorized if not authenticated.
+    /// 403 Forbidden if authenticated but not admin.
     /// 404 Not Found if note doesn't exist or already deleted.
     /// </returns>
     /// <remarks>
     /// HTTP Method: DELETE /api/notes/{id}
     /// 
+    /// ⚠️ AUTHORIZATION REQUIRED: Admin role only
+    /// 
+    /// To call this endpoint:
+    /// 1. Must be authenticated with valid JWT token
+    /// 2. User must have admin role (IsAdmin = true)
+    /// 3. Include token in Authorization header
+    /// 
     /// Example: DELETE /api/notes/1
+    /// Authorization: Bearer {admin_token}
     /// 
     /// Response: 204 No Content (no response body)
     /// 
@@ -517,6 +640,12 @@ public class NotesController : ControllerBase
     ///   Standard HTTP status for successful DELETE with no response body.
     ///   Indicates: "I did what you asked, nothing to return."
     ///   Alternative: 200 OK with success message (less RESTful).
+    /// 
+    /// Why admin-only deletion?
+    ///   - Prevents accidental or malicious content removal
+    ///   - Maintains content integrity
+    ///   - Creates clear audit trail
+    ///   - Aligns with blog-style architecture (controlled publishing)
     /// </remarks>
     [HttpDelete("{id}")]  // Route: DELETE /api/notes/123
     [Authorize(Roles = "Admin")]  // Only administrators can delete notes

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Hamco.Data;
 using Hamco.Core.Extensions;
+using Microsoft.Data.Sqlite;
 
 // ============================================================================
 // PROGRAM.CS - APPLICATION ENTRY POINT
@@ -66,39 +67,82 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 
 // ============================================================================
-// DATABASE CONFIGURATION (PostgreSQL via Entity Framework Core)
+// DATABASE CONFIGURATION (Environment-based provider selection)
 // ============================================================================
 
-// Get connection string from configuration
-// builder.Configuration: Loads from appsettings.json, environment variables, etc.
-// GetConnectionString("DefaultConnection"): Reads ConnectionStrings:DefaultConnection
-// ?? "...": Null-coalescing operator (use default if not found)
+// TESTING vs PRODUCTION DATABASE PROVIDERS
 // 
-// Configuration priority (highest to lowest):
-//   1. Command-line arguments
-//   2. Environment variables
-//   3. appsettings.{Environment}.json (Development, Production, etc.)
-//   4. appsettings.json
-//   5. Default value in code (after ??)
+// Problem: Integration tests need isolated in-memory databases,
+// but EF Core providers (Npgsql, SQLite) register deep internal services
+// that conflict when trying to swap providers at test runtime.
 // 
-// Connection string format (PostgreSQL):
-//   Host=localhost;Database=hamco_dev;Username=art;Password=
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? "Host=localhost;Database=hamco_dev;Username=art;Password=";
+// Solution: Register the RIGHT provider from the start based on environment.
+//   - Testing environment → SQLite in-memory (fast, isolated, no external deps)
+//   - Production/Development → PostgreSQL (real database with full features)
+// 
+// Environment detection:
+//   builder.Environment.IsEnvironment("Testing") checks ASPNETCORE_ENVIRONMENT
+//   Test factory sets this to "Testing" in ConfigureWebHost()
+// 
+// Benefits:
+//   ✓ No provider conflicts (single provider per app instance)
+//   ✓ Tests get truly isolated databases
+//   ✓ No complex service descriptor removal gymnastics
+//   ✓ Clean separation of concerns
 
-// Register database context with dependency injection
-// AddDbContext<T>(): Registers DbContext as scoped service
-// Scoped lifetime: New instance per HTTP request
-//   - Request starts → Create DbContext
-//   - Request ends → Dispose DbContext (close connection, discard changes)
-// 
-// Lambda: options => ... configures DbContext options
-// UseNpgsql(): Use PostgreSQL provider (Npgsql library)
-//   - Translates EF Core queries to PostgreSQL SQL
-//   - Handles PostgreSQL-specific features
-//   - Connection pooling, transaction management, etc.
-builder.Services.AddDbContext<HamcoDbContext>(options =>
-    options.UseNpgsql(connectionString));
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    // TESTING ENVIRONMENT: Use SQLite in-memory database
+    // 
+    // SQLite in-memory databases:
+    //   - Created fresh for each test instance
+    //   - No persistence between runs (perfect for tests)
+    //   - No external dependencies (no PostgreSQL server needed)
+    //   - Fast (runs entirely in memory)
+    // 
+    // Important: Connection must stay open for schema to persist!
+    // Test factory manages connection lifetime (see TestWebApplicationFactory)
+    // 
+    // Connection string "DataSource=:memory:" creates in-memory database
+    // Each WebApplicationFactory gets its own isolated instance
+    builder.Services.AddDbContext<HamcoDbContext>(options =>
+        options.UseSqlite("DataSource=:memory:"));
+}
+else
+{
+    // PRODUCTION/DEVELOPMENT: Use PostgreSQL via Npgsql
+    // 
+    // Get connection string from configuration
+    // builder.Configuration: Loads from appsettings.json, environment variables, etc.
+    // GetConnectionString("DefaultConnection"): Reads ConnectionStrings:DefaultConnection
+    // ?? "...": Null-coalescing operator (use default if not found)
+    // 
+    // Configuration priority (highest to lowest):
+    //   1. Command-line arguments
+    //   2. Environment variables
+    //   3. appsettings.{Environment}.json (Development, Production, etc.)
+    //   4. appsettings.json
+    //   5. Default value in code (after ??)
+    // 
+    // Connection string format (PostgreSQL):
+    //   Host=localhost;Database=hamco_dev;Username=art;Password=
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+        ?? "Host=localhost;Database=hamco_dev;Username=art;Password=";
+
+    // Register database context with dependency injection
+    // AddDbContext<T>(): Registers DbContext as scoped service
+    // Scoped lifetime: New instance per HTTP request
+    //   - Request starts → Create DbContext
+    //   - Request ends → Dispose DbContext (close connection, discard changes)
+    // 
+    // Lambda: options => ... configures DbContext options
+    // UseNpgsql(): Use PostgreSQL provider (Npgsql library)
+    //   - Translates EF Core queries to PostgreSQL SQL
+    //   - Handles PostgreSQL-specific features
+    //   - Connection pooling, transaction management, etc.
+    builder.Services.AddDbContext<HamcoDbContext>(options =>
+        options.UseNpgsql(connectionString));
+}
 
 // ============================================================================
 // AUTHENTICATION CONFIGURATION (JWT)

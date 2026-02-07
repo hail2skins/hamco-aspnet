@@ -98,20 +98,21 @@ public class AuthResponse
     /// List of roles assigned to this user (e.g., ["Admin", "User"]).
     /// </summary>
     /// <remarks>
-    /// ⚠️ CURRENTLY NOT POPULATED!
+    /// This field is populated from the user's Roles property.
     /// 
-    /// Roles are in JWT token claims, but AuthController doesn't
-    /// set this field in the response.
-    /// 
-    /// To fix, in AuthController.Register/Login:
+    /// In AuthController.Register/Login:
     ///   return Ok(new AuthResponse
     ///   {
     ///       Token = token,
     ///       UserId = user.Id,
     ///       Email = user.Email,
-    ///       Roles = user.Roles,  // Add this line!
+    ///       Roles = user.Roles,  // Populated from user entity
     ///       ExpiresAt = DateTime.UtcNow.AddMinutes(60)
     ///   });
+    /// 
+    /// Note: Currently, roles are determined by the IsAdmin flag:
+    ///   - If user.IsAdmin = true, roles include "Admin"
+    ///   - Otherwise, roles list is empty
     /// 
     /// Client can use roles for UI decisions:
     ///   if (authResponse.Roles.includes("Admin")) {
@@ -127,12 +128,7 @@ public class AuthResponse
     /// UTC timestamp when this token will expire.
     /// </summary>
     /// <remarks>
-    /// ⚠️ CURRENTLY NOT POPULATED!
-    /// 
-    /// This field is defined but never set in AuthController.
-    /// It should be set to token expiration time.
-    /// 
-    /// To fix, in AuthController.Register/Login:
+    /// This field is populated with the token expiration time in AuthController:
     ///   ExpiresAt = DateTime.UtcNow.AddMinutes(60)
     /// 
     /// Default token lifetime: 60 minutes (configurable in Program.cs)

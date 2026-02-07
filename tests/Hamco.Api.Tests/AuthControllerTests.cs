@@ -21,16 +21,27 @@ namespace Hamco.Api.Tests;
 /// - Login (success, wrong credentials, non-existent user)
 /// - Profile (authenticated, unauthenticated)
 /// - Password reset stubs (future Mailjet integration)
+/// 
+/// ISOLATED DATABASE PER TEST:
+/// Each test creates its own TestWebApplicationFactory with isolated SQLite in-memory database.
 /// </remarks>
-public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class AuthControllerTests : IDisposable
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestWebApplicationFactory _factory;
     private readonly HttpClient _client;
 
-    public AuthControllerTests(WebApplicationFactory<Program> factory)
+    public AuthControllerTests()
     {
-        _factory = factory;
-        _client = factory.CreateClient();
+        // Create a NEW factory for EACH test instance
+        // This ensures complete database isolation between tests
+        _factory = new TestWebApplicationFactory();
+        _client = _factory.CreateClient();
+    }
+    
+    public void Dispose()
+    {
+        _client?.Dispose();
+        _factory?.Dispose();
     }
 
     // ============================================================================

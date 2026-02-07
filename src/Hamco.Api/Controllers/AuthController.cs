@@ -14,13 +14,15 @@ namespace Hamco.Api.Controllers;
 /// </summary>
 /// <remarks>
 /// REST API endpoints:
-///   POST /api/auth/register - Create new user account
+///   POST /api/auth/register - Create new user account (first user becomes admin)
 ///   POST /api/auth/login    - Authenticate user and get JWT token
+///   GET  /api/auth/profile  - Get current user's profile (requires auth)
 /// 
 /// Authentication flow:
 /// 1. User registers (POST /api/auth/register)
 ///    → Password hashed with BCrypt
 ///    → User saved to database
+///    → First registered user automatically becomes admin (IsAdmin = true)
 ///    → JWT token generated and returned
 /// 
 /// 2. User logs in (POST /api/auth/login)
@@ -32,17 +34,33 @@ namespace Hamco.Api.Controllers;
 ///    → Include token: Authorization: Bearer {token}
 ///    → JWT middleware validates token
 ///    → User identity available in controllers
+///    → [Authorize] attributes enforce authentication
+///    → [Authorize(Roles = "Admin")] enforces admin-only access
+/// 
+/// Authorization in Hamco:
+///   - Public endpoints: Register, Login, Get Notes (blog-style public read)
+///   - Authenticated endpoints: Get Profile (any logged-in user)
+///   - Admin-only endpoints: Create/Update/Delete Notes (content management)
 /// 
 /// Security features:
 ///   ✅ Passwords hashed with BCrypt (never stored in plain text)
 ///   ✅ JWT tokens for stateless authentication
 ///   ✅ Email uniqueness enforced (prevents duplicate accounts)
 ///   ✅ Password verification constant-time (prevents timing attacks)
+///   ✅ First user auto-promoted to admin (simplifies initial setup)
+///   ✅ Role-based authorization enforced on note endpoints
 /// 
-/// ⚠️ Current limitation:
-///   Authentication is implemented but NOT enforced on note endpoints.
-///   Notes can be created/modified by anyone (anonymous access).
-///   Future: Add [Authorize] attribute to NotesController actions.
+/// Real-world example:
+///   1. Deploy Hamco API
+///   2. First person registers → automatically becomes admin
+///   3. Admin can create blog posts (POST /api/notes)
+///   4. Anyone can read blog posts (GET /api/notes) - no auth needed
+///   5. Only admin can edit/delete posts
+/// 
+/// This is a common pattern for:
+///   - Personal blogs (you're the only author)
+///   - Company blogs (small team of authors)
+///   - Content management systems (controlled publishing)
 /// </remarks>
 [ApiController]
 [Route("api/[controller]")]  // Route: /api/auth
@@ -88,18 +106,22 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Registers a new user account.
+    /// Registers a new user account. The first registered user automatically becomes an administrator.
     /// </summary>
     /// <param name="request">
     /// Registration data (username, email, password).
     /// Validated automatically via Data Annotations.
     /// </param>
     /// <returns>
-    /// 200 OK with JWT token if successful.
-    /// 400 Bad Request if email already exists or validation fails.
+    /// 201 Created with JWT token if successful.
+    /// 409 Conflict if email already exists or validation fails.
     /// </returns>
     /// <remarks>
     /// HTTP Method: POST /api/auth/register
+    /// 
+    /// IMPORTANT: First user becomes admin automatically!
+    /// This simplifies initial setup - no separate admin creation needed.
+    /// Subsequent users are regular users (IsAdmin = false).
     /// 
     /// Request body (JSON):
     /// {
@@ -108,23 +130,33 @@ public class AuthController : ControllerBase
     ///   "password": "securePassword123"
     /// }
     /// 
-    /// Response (200 OK):
+    /// Response (201 Created):
     /// {
     ///   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     ///   "userId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     ///   "email": "john@example.com",
     ///   "roles": [],
-    ///   "expiresAt": null  ← ⚠️ Not populated (should be fixed)
+    ///   "expiresAt": "2026-02-06T15:30:00Z"
+    /// }
+    /// 
+    /// Response (409 Conflict) - Email exists:
+    /// {
+    ///   "message": "Email already exists"
     /// }
     /// 
     /// Registration process:
     /// 1. Validate input (automatic via Data Annotations)
     /// 2. Check if email already exists (prevent duplicates)
-    /// 3. Hash password with BCrypt (original password discarded)
-    /// 4. Create user entity
-    /// 5. Save to database
-    /// 6. Generate JWT token
-    /// 7. Return token to client (immediate login)
+    /// 3. Check if this is the first user (determines admin status)
+    /// 4. Hash password with BCrypt (original password discarded)
+    /// 5. Create user entity with appropriate role
+    /// 6. Save to database
+    /// 7. Generate JWT token
+    /// 8. Return token to client (immediate login)
+    /// 
+    /// Admin promotion logic:
+    ///   var isFirstUser = !await _context.Users.AnyAsync();
+    ///   user.IsAdmin = isFirstUser;  // true if first, false otherwise
     /// 
     /// Why immediate login after registration?
     ///   Better UX: User doesn't need to login separately
@@ -134,14 +166,17 @@ public class AuthController : ControllerBase
     /// Security considerations:
     ///   ✅ Password hashed before storage (BCrypt, work factor 12)
     ///   ✅ Email uniqueness checked (prevents duplicate accounts)
-    ///   ⚠️ No email verification (should send confirmation email)
+    ///   ✅ First user promoted to admin (simplifies setup)
+    ///   ⚠️ No email verification (future: send confirmation email)
     ///   ⚠️ Weak password rules (6 chars minimum, no complexity)
     ///   ⚠️ No rate limiting (vulnerable to spam registrations)
     /// 
-    /// BadRequest() explained:
-    ///   Returns 400 Bad Request with custom error object.
-    ///   Anonymous object: new { message = "..." }
-    ///   Serialized to JSON: {"message":"Email already exists"}
+    /// Real-world deployment:
+    ///   1. Deploy API to production
+    ///   2. Register first user (yourself) → becomes admin
+    ///   3. Use admin token to create initial content
+    ///   4. Later users register as regular users
+    ///   5. Manually promote additional admins via database if needed
     /// </remarks>
     [HttpPost("register")]  // Route: POST /api/auth/register
     public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
