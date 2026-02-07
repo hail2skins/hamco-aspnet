@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
+    <!-- Disable all default items to prevent duplicates -->
+    <EnableDefaultItems>false</EnableDefaultItems>
+  </PropertyGroup>
+
+  <!-- Reference all source files from the actual API project -->
+  <ItemGroup>
+    <Compile Include="src/Hamco.Api/**/*.cs" Exclude="src/Hamco.Api/obj/**;src/Hamco.Api/bin/**" />
+    <Content Include="src/Hamco.Api/appsettings*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>%(Filename)%(Extension)</Link>
+    </Content>
+  </ItemGroup>
+
+  <!-- Include all package references from the original project -->
+  <ItemGroup>
+    <PackageReference Include="dotenv.net" Version="4.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
+  </ItemGroup>
+
+  <!-- Reference other projects -->
+  <ItemGroup>
+    <ProjectReference Include="src/Hamco.Core/Hamco.Core.csproj" />
+    <ProjectReference Include="src/Hamco.Data/Hamco.Data.csproj" />
+    <ProjectReference Include="src/Hamco.Services/Hamco.Services.csproj" />
+  </ItemGroup>
+
+</Project>
