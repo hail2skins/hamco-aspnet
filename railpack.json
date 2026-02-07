@@ -1,0 +1,11 @@
+{
+  "setup": [
+    "dotnet-sdk@10"
+  ],
+  "install": [
+    "dotnet restore"
+  ],
+  "build": [
+    "dotnet publish -c Release -o out"
+  ]
+}
