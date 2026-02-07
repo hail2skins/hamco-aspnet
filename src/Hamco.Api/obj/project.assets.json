@@ -15,6 +15,15 @@
           }
         }
       },
+      "dotenv.net/4.0.0": {
+        "type": "package",
+        "compile": {
+          "lib/netstandard2.1/dotenv.net.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.1/dotenv.net.dll": {}
+        }
+      },
       "Humanizer.Core/2.14.1": {
         "type": "package",
         "compile": {
@@ -1077,6 +1086,20 @@
         "lib/netstandard2.1/BCrypt.Net-Next.dll",
         "lib/netstandard2.1/BCrypt.Net-Next.xml",
         "readme.md"
+      ]
+    },
+    "dotenv.net/4.0.0": {
+      "sha512": "SM8Qp6L/E3tsLKDFkV23M8WHyp5l1YqsXkylQDjQjV02Z2tUL3J6j1gV0gMs4L6YtoSB7jZPw2dnDdnpEXnpNQ==",
+      "type": "package",
+      "path": "dotenv.net/4.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "dotenv.net.4.0.0.nupkg.sha512",
+        "dotenv.net.nuspec",
+        "lib/netstandard2.0/dotenv.net.dll",
+        "lib/netstandard2.1/dotenv.net.dll"
       ]
     },
     "Humanizer.Core/2.14.1": {
@@ -2960,7 +2983,8 @@
       "Microsoft.AspNetCore.Authentication.JwtBearer >= 10.0.2",
       "Microsoft.AspNetCore.OpenApi >= 10.0.2",
       "Microsoft.EntityFrameworkCore.Design >= 10.0.2",
-      "Microsoft.EntityFrameworkCore.Sqlite >= 10.0.2"
+      "Microsoft.EntityFrameworkCore.Sqlite >= 10.0.2",
+      "dotenv.net >= 4.0.0"
     ]
   },
   "packageFolders": {
@@ -3033,6 +3057,10 @@
           "Microsoft.EntityFrameworkCore.Sqlite": {
             "target": "Package",
             "version": "[10.0.2, )"
+          },
+          "dotenv.net": {
+            "target": "Package",
+            "version": "[4.0.0, )"
           }
         },
         "imports": [

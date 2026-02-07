@@ -1,0 +1,49 @@
+# =============================================================================
+# Hamco Blog API - Git Ignore
+# =============================================================================
+
+# Environment files (contain secrets!)
+.env
+.env.local
+.env.*.local
+
+# .NET build artifacts
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.cache
+
+# IDE files
+.vs/
+.vscode/
+*.user
+*.suo
+*.swp
+*~
+.idea/
+
+# Test results
+TestResults/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database files (SQLite - for local testing)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
+
+# Publish outputs
+publish/
+app.publish/
+
+# NuGet
+*.nupkg

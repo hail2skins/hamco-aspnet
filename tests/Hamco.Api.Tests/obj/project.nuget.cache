@@ -1,11 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "4zf6SY/OPxo=",
+  "dgSpecHash": "AfGvpj8hlto=",
   "success": true,
   "projectFilePath": "/Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Hamco.Api.Tests.csproj",
   "expectedPackageFiles": [
     "/Users/art/.nuget/packages/bcrypt.net-next/4.0.3/bcrypt.net-next.4.0.3.nupkg.sha512",
     "/Users/art/.nuget/packages/coverlet.collector/6.0.4/coverlet.collector.6.0.4.nupkg.sha512",
+    "/Users/art/.nuget/packages/dotenv.net/4.0.0/dotenv.net.4.0.0.nupkg.sha512",
     "/Users/art/.nuget/packages/microsoft.aspnetcore.authentication.jwtbearer/10.0.2/microsoft.aspnetcore.authentication.jwtbearer.10.0.2.nupkg.sha512",
     "/Users/art/.nuget/packages/microsoft.aspnetcore.mvc.testing/10.0.2/microsoft.aspnetcore.mvc.testing.10.0.2.nupkg.sha512",
     "/Users/art/.nuget/packages/microsoft.aspnetcore.openapi/10.0.2/microsoft.aspnetcore.openapi.10.0.2.nupkg.sha512",

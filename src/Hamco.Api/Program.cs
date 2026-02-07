@@ -2,23 +2,35 @@ using Microsoft.EntityFrameworkCore;
 using Hamco.Data;
 using Hamco.Core.Extensions;
 using Microsoft.Data.Sqlite;
+using dotenv.net;
 
 // ============================================================================
 // PROGRAM.CS - APPLICATION ENTRY POINT
 // ============================================================================
 // This file configures and runs the ASP.NET Core web application.
 // Execution flow:
-//   1. Create WebApplicationBuilder (configure services)
-//   2. Build WebApplication (create app instance)
-//   3. Configure HTTP request pipeline (middleware)
-//   4. Run application (start web server)
+//   1. Load .env file for local development secrets
+//   2. Create WebApplicationBuilder (configure services)
+//   3. Build WebApplication (create app instance)
+//   4. Configure HTTP request pipeline (middleware)
+//   5. Run application (start web server)
 //
 // Think of this as the "main()" method for web applications.
 // ============================================================================
 
+// Load .env file BEFORE creating builder (so env vars are available for configuration)
+// DotEnv.Load() reads .env file in project root and sets environment variables
+// These variables then become available via Environment.GetEnvironmentVariable()
+// and are picked up by builder.Configuration
+// 
+// .env file contains secrets (DB passwords, JWT keys) that should NOT be committed
+// Railway and other hosts provide env vars directly, so this is safe to run
+// (will just do nothing if .env doesn't exist)
+DotEnv.Load();
+
 // Step 1: Create application builder
 // WebApplication.CreateBuilder() initializes the application:
-//   - Loads configuration (appsettings.json, environment variables, etc.)
+//   - Loads configuration (appsettings.json, environment variables, .env, etc.)
 //   - Sets up dependency injection container
 //   - Configures logging
 //   - Sets up default services
@@ -112,22 +124,54 @@ else
 {
     // PRODUCTION/DEVELOPMENT: Use PostgreSQL via Npgsql
     // 
-    // Get connection string from configuration
-    // builder.Configuration: Loads from appsettings.json, environment variables, etc.
-    // GetConnectionString("DefaultConnection"): Reads ConnectionStrings:DefaultConnection
-    // ?? "...": Null-coalescing operator (use default if not found)
-    // 
-    // Configuration priority (highest to lowest):
-    //   1. Command-line arguments
-    //   2. Environment variables
-    //   3. appsettings.{Environment}.json (Development, Production, etc.)
-    //   4. appsettings.json
-    //   5. Default value in code (after ??)
-    // 
-    // Connection string format (PostgreSQL):
-    //   Host=localhost;Database=hamco_dev;Username=art;Password=
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-        ?? "Host=localhost;Database=hamco_dev;Username=art;Password=";
+    // Connection string sources (highest priority first):
+    //   1. DATABASE_URL environment variable (Railway, Heroku, etc. provide this)
+    //   2. Individual DB_* environment variables (see .env.example)
+    //   3. ConnectionStrings:DefaultConnection from appsettings.json
+    //   4. Default localhost fallback for development
+    //
+    // Railway provides DATABASE_URL like: postgres://user:password@host:port/database
+    // We parse this and also support individual DB_HOST, DB_PORT, etc.
+    
+    string connectionString;
+    
+    // Check for Railway-style DATABASE_URL
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+    if (!string.IsNullOrEmpty(databaseUrl))
+    {
+        // Parse postgres://user:password@host:port/database format
+        try
+        {
+            var uri = new Uri(databaseUrl);
+            var userInfo = uri.UserInfo.Split(':');
+            var user = userInfo[0];
+            var password = userInfo.Length > 1 ? userInfo[1] : "";
+            connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={user};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+        }
+        catch
+        {
+            // If parsing fails, use as-is
+            connectionString = databaseUrl;
+        }
+    }
+    else
+    {
+        // Build connection string from individual env vars or appsettings
+        var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
+        var port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
+        var database = Environment.GetEnvironmentVariable("DB_NAME") ?? "hamco_dev";
+        var username = Environment.GetEnvironmentVariable("DB_USER") ?? "art";
+        var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "";
+        
+        connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password}";
+        
+        // Fallback to appsettings if no env vars set
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DB_HOST")))
+        {
+            connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+                ?? connectionString;
+        }
+    }
 
     // Register database context with dependency injection
     // AddDbContext<T>(): Registers DbContext as scoped service
@@ -148,11 +192,23 @@ else
 // AUTHENTICATION CONFIGURATION (JWT)
 // ============================================================================
 
-// Get JWT configuration from appsettings.json or use defaults
-// Null-coalescing operator (??) provides fallback values
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "your-very-secret-key-that-is-at-least-32-characters-long";
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "hamco-api";
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "hamco-client";
+// Get JWT configuration from environment variables or appsettings.json
+// Priority: Environment Variables > appsettings.json > Default fallback
+// 
+// For Railway/production: Set JWT_KEY, JWT_ISSUER, JWT_AUDIENCE env vars
+// For local development: Use .env file (see .env.example)
+//
+// Generate a secure JWT key for production:
+//   openssl rand -base64 32
+var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") 
+    ?? builder.Configuration["Jwt:Key"] 
+    ?? "your-very-secret-key-change-in-production-minimum-32-chars";
+var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") 
+    ?? builder.Configuration["Jwt:Issuer"] 
+    ?? "hamco-api";
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") 
+    ?? builder.Configuration["Jwt:Audience"] 
+    ?? "hamco-client";
 
 // Register authentication services using extension method
 // AddAuthServices() is defined in ServiceCollectionExtensions

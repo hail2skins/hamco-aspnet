@@ -374,6 +374,17 @@
           "lib/net6.0/BCrypt.Net-Next.dll": {}
         }
       },
+      "dotenv.net/4.0.0": {
+        "runtime": {
+          "lib/netstandard2.1/dotenv.net.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        },
+        "compile": {
+          "lib/netstandard2.1/dotenv.net.dll": {}
+        }
+      },
       "Microsoft.AspNetCore.Authentication.JwtBearer/10.0.2": {
         "dependencies": {
           "Microsoft.IdentityModel.Protocols.OpenIdConnect": "8.0.1"
@@ -1210,7 +1221,8 @@
           "Hamco.Services": "1.0.0",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "10.0.2",
           "Microsoft.AspNetCore.OpenApi": "10.0.2",
-          "Microsoft.EntityFrameworkCore.Sqlite": "10.0.2"
+          "Microsoft.EntityFrameworkCore.Sqlite": "10.0.2",
+          "dotenv.net": "4.0.0"
         },
         "runtime": {
           "Hamco.Api.dll": {
@@ -3378,6 +3390,13 @@
       "sha512": "sha512-W+U9WvmZQgi5cX6FS5GDtDoPzUCV4LkBLkywq/kRZhuDwcbavOzcDAr3LXJFqHUi952Yj3LEYoWW0jbEUQChsA==",
       "path": "bcrypt.net-next/4.0.3",
       "hashPath": "bcrypt.net-next.4.0.3.nupkg.sha512"
+    },
+    "dotenv.net/4.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-SM8Qp6L/E3tsLKDFkV23M8WHyp5l1YqsXkylQDjQjV02Z2tUL3J6j1gV0gMs4L6YtoSB7jZPw2dnDdnpEXnpNQ==",
+      "path": "dotenv.net/4.0.0",
+      "hashPath": "dotenv.net.4.0.0.nupkg.sha512"
     },
     "Microsoft.AspNetCore.Authentication.JwtBearer/10.0.2": {
       "type": "package",
