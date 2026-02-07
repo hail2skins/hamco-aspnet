@@ -8,14 +8,14 @@ export ASPNETCORE_URLS="http://0.0.0.0:${PORT:-8080}"
 # Nixpacks/Railway can publish to different locations, so check common ones
 
 # Check if published as self-contained binary
+# Check if published from railpack.json build step
 if [ -f "./out/Hamco.Api" ]; then
     echo "Starting Hamco.Api (self-contained binary)..."
     exec ./out/Hamco.Api
 fi
 
-# Check if published as DLL (most common)
 if [ -f "./out/Hamco.Api.dll" ]; then
-    echo "Starting Hamco.Api (dotnet DLL)..."
+    echo "Starting Hamco.Api (from railpack out/)..."
     exec dotnet ./out/Hamco.Api.dll
 fi
 

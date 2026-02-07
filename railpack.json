@@ -1,0 +1,14 @@
+{
+  "setup": [
+    "dotnet-sdk@10"
+  ],
+  "install": [
+    "dotnet restore"
+  ],
+  "build": [
+    "dotnet publish src/Hamco.Api/Hamco.Api.csproj -c Release -o out"
+  ],
+  "start": [
+    "dotnet out/Hamco.Api.dll"
+  ]
+}
