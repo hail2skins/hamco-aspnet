@@ -1,0 +1,13 @@
+{
+  "providers": ["dotnet"],
+  "steps": [
+    {
+      "name": "restore",
+      "command": "dotnet restore App.sln"
+    },
+    {
+      "name": "build", 
+      "command": "dotnet publish src/Hamco.Api/Hamco.Api.csproj -c Release -o out --no-restore"
+    }
+  ]
+}
