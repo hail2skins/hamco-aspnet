@@ -47,3 +47,4 @@ app.publish/
 
 # NuGet
 *.nupkg
+out/
