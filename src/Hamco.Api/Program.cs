@@ -275,23 +275,17 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-// Force HTTPS redirection
-// app.UseHttpsRedirection() middleware:
-//   - Checks if request uses HTTP
-//   - If HTTP, returns 307 Temporary Redirect to HTTPS URL
-//   - If HTTPS, passes through to next middleware
+// HTTPS Redirection - DISABLED for Railway
 // 
-// Example:
-//   Request: http://localhost:5000/api/notes
-//   Response: 307 Redirect to https://localhost:5001/api/notes
-// 
-// Important for security:
-//   - Protects authentication tokens from interception
-//   - Prevents man-in-the-middle attacks
-//   - Required for JWT token security
-// 
-// Note: Development certificates are self-signed (browser warnings expected)
-app.UseHttpsRedirection();
+// Railway handles SSL termination at the edge (load balancer)
+// The app container runs HTTP internally
+// Enabling HTTPS redirection here causes issues because there's no HTTPS port
+// inside the container - Railway provides HTTPS externally
+//
+// Local development: HTTPS redirection is handled by launchSettings.json
+// Production (Railway): Railway provides HTTPS at the edge
+//
+// Commented out: app.UseHttpsRedirection();
 
 // Enable authentication middleware
 // app.UseAuthentication() middleware:
@@ -339,6 +333,40 @@ app.UseAuthorization();
 //   We use attribute routing ([Route], [HttpGet]) - modern, explicit
 //   Alternative: Convention routing (routes defined in Program.cs) - older style
 app.MapControllers();
+
+// ============================================================================
+// DATABASE MIGRATIONS (Production)
+// ============================================================================
+// 
+// Apply pending migrations on startup
+// This ensures the database schema is up-to-date before accepting requests
+// 
+// WARNING: For production with multiple instances, use proper migration strategy:
+//   - Run migrations as a separate deployment step
+//   - Or use database deployment tools (DbUp, FluentMigrator)
+//   - Or use container init scripts
+// 
+// For Railway/single-instance deployments, this is acceptable
+// For Kubernetes/multi-instance, run migrations as a Job, not in the app
+
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<HamcoDbContext>();
+        try
+        {
+            Console.WriteLine("Applying database migrations...");
+            dbContext.Database.Migrate();
+            Console.WriteLine("Database migrations applied successfully.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error applying migrations: {ex.Message}");
+            // Don't crash - let the app start anyway (Railway will restart if unhealthy)
+        }
+    }
+}
 
 // ============================================================================
 // RUN APPLICATION
