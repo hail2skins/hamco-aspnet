@@ -1,7 +1,0 @@
-<Solution>
-  <Project Path="src/Hamco.Api/Hamco.Api.csproj" />
-  <Project Path="src/Hamco.Core/Hamco.Core.csproj" />
-  <Project Path="src/Hamco.Data/Hamco.Data.csproj" />
-  <Project Path="src/Hamco.Services/Hamco.Services.csproj" />
-  <Project Path="App.csproj" />
-</Solution>
