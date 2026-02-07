@@ -9,14 +9,14 @@ COPY src/Hamco.Core/Hamco.Core.csproj src/Hamco.Core/
 COPY src/Hamco.Data/Hamco.Data.csproj src/Hamco.Data/
 COPY src/Hamco.Services/Hamco.Services.csproj src/Hamco.Services/
 
-# Restore dependencies
-RUN dotnet restore src/Hamco.Api/Hamco.Api.csproj
-
 # Copy all source files
 COPY . .
 
+# Restore dependencies for entire solution
+RUN dotnet restore
+
 # Build and publish
-RUN dotnet publish src/Hamco.Api/Hamco.Api.csproj -c Release -o /app/publish --no-restore
+RUN dotnet publish src/Hamco.Api/Hamco.Api.csproj -c Release -o /app/publish
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
