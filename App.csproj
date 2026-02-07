@@ -5,21 +5,23 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OutputType>Exe</OutputType>
-    <!-- Disable all default items to prevent duplicates -->
-    <EnableDefaultItems>false</EnableDefaultItems>
   </PropertyGroup>
 
-  <!-- Reference all source files from the actual API project -->
+  <!-- Include all source files from all projects -->
   <ItemGroup>
-    <Compile Include="src/Hamco.Api/**/*.cs" Exclude="src/Hamco.Api/obj/**;src/Hamco.Api/bin/**" />
+    <Compile Include="src/**/*.cs" Exclude="src/**/obj/**;src/**/bin/**;src/**/*.Tests/**" />
+  </ItemGroup>
+
+  <!-- Include config files -->
+  <ItemGroup>
     <Content Include="src/Hamco.Api/appsettings*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>%(Filename)%(Extension)</Link>
     </Content>
   </ItemGroup>
 
-  <!-- Include all package references from the original project -->
+  <!-- All package references from all projects -->
   <ItemGroup>
+    <!-- From Hamco.Api -->
     <PackageReference Include="dotenv.net" Version="4.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
@@ -28,13 +30,13 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
-  </ItemGroup>
-
-  <!-- Reference other projects -->
-  <ItemGroup>
-    <ProjectReference Include="src/Hamco.Core/Hamco.Core.csproj" />
-    <ProjectReference Include="src/Hamco.Data/Hamco.Data.csproj" />
-    <ProjectReference Include="src/Hamco.Services/Hamco.Services.csproj" />
+    
+    <!-- From Hamco.Core -->
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
+    
+    <!-- From Hamco.Data -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
   </ItemGroup>
 
 </Project>
