@@ -42,7 +42,8 @@ namespace Hamco.Api.Controllers;
 /// </remarks>
 [ApiController]  // Enables automatic model validation and API conventions
 [Route("api/[controller]")]  // Route pattern: /api/notes ([controller] = Notes)
-[Authorize]  // Require authentication for all endpoints in this controller
+// NOTE: No [Authorize] at class level - GET endpoints are public (blog is readable by anyone)
+// Individual POST/PUT/DELETE methods have [Authorize(Roles = "Admin")]
 public class NotesController : ControllerBase
 {
     // Private field to store database context
@@ -426,6 +427,7 @@ public class NotesController : ControllerBase
     ///   Alternative: Allow manual slug editing, separate from title.
     /// </remarks>
     [HttpPut("{id}")]  // Route: PUT /api/notes/123
+    [Authorize(Roles = "Admin")]  // Only administrators can update notes
     public async Task<ActionResult<NoteResponse>> UpdateNote(int id, UpdateNoteRequest request)
     {
         // Step 1: Find existing note
@@ -517,6 +519,7 @@ public class NotesController : ControllerBase
     ///   Alternative: 200 OK with success message (less RESTful).
     /// </remarks>
     [HttpDelete("{id}")]  // Route: DELETE /api/notes/123
+    [Authorize(Roles = "Admin")]  // Only administrators can delete notes
     public async Task<IActionResult> DeleteNote(int id)
     {
         // Step 1: Find note to delete
