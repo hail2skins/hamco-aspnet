@@ -66,6 +66,15 @@ Hamco is a learning project demonstrating modern C# web development patterns:
 - **Profile Endpoint** for authenticated users
 - **API Key Authentication** for bots and automation (Admin & Read-Only keys)
 
+#### Slogans
+- **Create Slogan** - Admin only (POST /api/slogans)
+- **Read All Slogans** - Admin only (GET /api/slogans)
+- **Update Slogan** - Admin only (PUT /api/slogans/{id})
+- **Delete Slogan** - Admin only (DELETE /api/slogans/{id})
+- **IsActive Flag** - Toggle slogans without deleting
+- **CreatedBy Tracking** - Know which admin created each slogan
+- **Server-Side Rendering** - Public sees random slogans in UI (no API access)
+
 #### Testing
 - **10 Auth Endpoint Tests** - Registration, login, profile, validation
 - **13 Notes Authorization Tests** - Admin write, public read, auth enforcement
@@ -107,6 +116,7 @@ hamco/
 │   │   │   ├── AuthController.cs   # Register/Login endpoints
 │   │   │   └── Admin/
 │   │   │       └── ApiKeysController.cs  # API key management (admin only)
+│   │   │       └── SlogansController.cs  # Slogan management (admin only)
 │   │   └── Middleware/
 │   │       └── ApiKeyMiddleware.cs # API key authentication middleware
 │   │
@@ -115,6 +125,7 @@ hamco/
 │   │   │   ├── Note.cs             # Note entity (UserId required)
 │   │   │   ├── User.cs             # User entity (IsAdmin, IsEmailVerified)
 │   │   │   ├── ApiKey.cs           # API key entity (authentication)
+│   │   │   ├── Slogan.cs           # Slogan entity (admin-managed)
 │   │   │   ├── *Request.cs         # API request DTOs
 │   │   │   └── *Response.cs        # API response DTOs
 │   │   ├── Services/
@@ -142,6 +153,7 @@ hamco/
     │   ├── ApiKeyPermissionsTests.cs  # API key integration tests
     │   └── Controllers/Admin/
     │       └── ApiKeysControllerTests.cs  # API key controller tests
+    │       └── SlogansControllerTests.cs  # Slogan controller tests
     │
     └── Hamco.Core.Tests/           # Unit tests
         └── Services/
@@ -194,9 +206,20 @@ hamco/
 | `created_at` | timestamp | Default: now() | When key was generated |
 | `created_by_user_id` | string | Foreign Key (optional) | Admin who created the key |
 
+### `slogans` Table
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | int | Primary Key, Auto-increment | Slogan ID |
+| `text` | string(500) | Required | Slogan text |
+| `is_active` | boolean | Default: true | Active status |
+| `created_at` | timestamp | Default: now() | Creation time |
+| `created_by_user_id` | string | Foreign Key (optional) | Admin who created |
+| `updated_at` | timestamp | Nullable | Last update time |
+
 **Relationships:**
 - `notes.user_id` → `users.id` (Many-to-One, Required)
 - `api_keys.created_by_user_id` → `users.id` (Many-to-One, Optional)
+- `slogans.created_by_user_id` → `users.id` (Many-to-One, Optional)
 - Foreign keys enforce referential integrity
 
 ---
@@ -630,6 +653,106 @@ Authorization: Bearer {admin_token}
 **Response (403 Forbidden):** Token valid but user is not admin
 
 **Response (404 Not Found):** Note doesn't exist
+
+---
+
+### Slogan Endpoints (Admin Only)
+
+All slogan endpoints require Admin authentication (JWT or API Key). No public access.
+
+#### List All Slogans
+Returns all slogans (active and inactive) for admin management.
+
+```http
+GET /api/slogans
+Authorization: Bearer {admin_token}
+```
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": 1,
+    "text": "Your AI workspace, everywhere",
+    "isActive": true,
+    "createdAt": "2026-02-08T12:00:00Z",
+    "createdByUserId": "a1b2c3d4-...",
+    "updatedAt": null
+  }
+]
+```
+
+**Response (401 Unauthorized):** No token provided
+**Response (403 Forbidden):** Token valid but user is not admin
+
+---
+
+#### Create Slogan (Admin Only)
+Creates a new slogan. Requires admin authentication.
+
+```http
+POST /api/slogans
+Content-Type: application/json
+Authorization: Bearer {admin_token}
+
+{
+  "text": "Your AI workspace, everywhere",
+  "isActive": true
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "id": 1,
+  "text": "Your AI workspace, everywhere",
+  "isActive": true,
+  "createdAt": "2026-02-08T12:00:00Z",
+  "createdByUserId": "a1b2c3d4-...",
+  "updatedAt": null
+}
+```
+
+**Response (401 Unauthorized):** No token provided
+**Response (403 Forbidden):** Token valid but user is not admin
+
+---
+
+#### Update Slogan (Admin Only)
+Updates an existing slogan. Requires admin authentication.
+
+```http
+PUT /api/slogans/1
+Content-Type: application/json
+Authorization: Bearer {admin_token}
+
+{
+  "text": "Updated slogan text",
+  "isActive": false
+}
+```
+
+**Response (200 OK):** Updated slogan
+
+**Response (401 Unauthorized):** No token provided
+**Response (403 Forbidden):** Token valid but user is not admin
+**Response (404 Not Found):** Slogan doesn't exist
+
+---
+
+#### Delete Slogan (Admin Only)
+Deletes a slogan from the database. Requires admin authentication.
+
+```http
+DELETE /api/slogans/1
+Authorization: Bearer {admin_token}
+```
+
+**Response (204 No Content):** Slogan deleted successfully
+
+**Response (401 Unauthorized):** No token provided
+**Response (403 Forbidden):** Token valid but user is not admin
+**Response (404 Not Found):** Slogan doesn't exist
 
 ---
 
