@@ -186,6 +186,33 @@ public class HamcoDbContext : DbContext
     public DbSet<ApiKey> ApiKeys { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets the Slogans table.
+    /// Used to query and manage slogans (admin-only access).
+    /// </summary>
+    /// <remarks>
+    /// Slogans DbSet:
+    ///   Manages slogans displayed in the Hamco UI.
+    ///   Admin-only access - no public endpoints.
+    /// 
+    /// Example operations:
+    ///   // Create slogan (admin only)
+    ///   var slogan = new Slogan { Text = "Your AI workspace" };
+    ///   Slogans.Add(slogan);
+    ///   await SaveChangesAsync();
+    ///   
+    ///   // Get random active slogan (admin only)
+    ///   var random = await Slogans
+    ///       .Where(s => s.IsActive)
+    ///       .OrderBy(s => Guid.NewGuid())
+    ///       .FirstOrDefaultAsync();
+    ///   
+    ///   // Deactivate slogan
+    ///   slogan.IsActive = false;
+    ///   await SaveChangesAsync();
+    /// </remarks>
+    public DbSet<Slogan> Slogans { get; set; } = null!;
+
+    /// <summary>
     /// Configures the database schema using Fluent API.
     /// Called by EF Core when building the database model.
     /// </summary>
@@ -428,6 +455,53 @@ public class HamcoDbContext : DbContext
             // Index on CreatedByUserId (for "list my keys" queries)
             entity.HasIndex(e => e.CreatedByUserId)
                 .HasDatabaseName("ix_api_keys_created_by_user_id");
+        });
+
+        // Configure Slogan entity (maps to 'slogans' table)
+        modelBuilder.Entity<Slogan>(entity =>
+        {
+            // Table name: 'slogans' (lowercase, PostgreSQL convention)
+            entity.ToTable("slogans");
+            
+            // Primary key: Id column
+            entity.HasKey(e => e.Id);
+            
+            // Configure Id column (auto-increment in PostgreSQL)
+            entity.Property(e => e.Id)
+                .HasColumnName("id");
+            
+            // Configure Text column (the slogan text)
+            entity.Property(e => e.Text)
+                .HasColumnName("text")
+                .IsRequired()
+                .HasMaxLength(500); // Reasonable max for slogans
+            
+            // Configure IsActive column (controls visibility in random rotation)
+            entity.Property(e => e.IsActive)
+                .HasColumnName("is_active")
+                .IsRequired()
+                .HasDefaultValue(true);
+            
+            // Configure CreatedAt column (auto-set to current timestamp)
+            entity.Property(e => e.CreatedAt)
+                .HasColumnName("created_at")
+                .IsRequired()
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            
+            // Configure CreatedByUserId column (tracks which admin created it)
+            entity.Property(e => e.CreatedByUserId)
+                .HasColumnName("created_by_user_id")
+                .HasMaxLength(36); // GUID length
+            // Not required (nullable for system-created slogans)
+            
+            // Configure UpdatedAt column (null until first update)
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnName("updated_at");
+            // Nullable - no .IsRequired()
+            
+            // Index on IsActive for efficient random selection of active slogans
+            entity.HasIndex(e => e.IsActive)
+                .HasDatabaseName("ix_slogans_is_active");
         });
     }
 }
