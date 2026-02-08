@@ -45,6 +45,23 @@ public class ApiKeyMiddleware
     /// <param name="context">HTTP context for the request.</param>
     /// <param name="apiKeyService">Service for validating API keys.</param>
     /// <returns>Task representing async operation.</returns>
+    /// <remarks>
+    /// Authentication Order (Program.cs middleware pipeline):
+    ///   1. UseAuthentication() - JWT middleware checks Authorization header
+    ///   2. UseApiKeyAuthentication() - This middleware checks X-API-Key header
+    ///   3. UseAuthorization() - Policy checks (e.g., [Authorize(Roles="Admin")])
+    /// 
+    /// Why this order?
+    ///   - JWT is faster (no database lookup)
+    ///   - JWT is more common (most requests use it)
+    ///   - API keys are for automation (less frequent)
+    ///   - If JWT valid, skip API key check (performance)
+    /// 
+    /// Both can work in same app:
+    ///   - Web UI users: JWT tokens
+    ///   - Bots/automation: API keys
+    ///   - Same authorization policies work for both!
+    /// </remarks>
     public async Task InvokeAsync(HttpContext context, IApiKeyService apiKeyService)
     {
         // Only process if no user is already authenticated

@@ -13,6 +13,7 @@ A modern RESTful API built with **ASP.NET Core** and **PostgreSQL** for managing
 - [Database Schema](#database-schema)
 - [Getting Started](#getting-started)
 - [Authentication & Authorization](#authentication--authorization)
+- [API Keys](#api-keys)
 - [API Endpoints](#api-endpoints)
 - [Running Tests](#running-tests)
 - [Configuration](#configuration)
@@ -33,11 +34,12 @@ Hamco is a learning project demonstrating modern C# web development patterns:
 
 **Current Status:** Fully implemented authentication and authorization system:
 - ✅ JWT authentication with secure token generation
+- ✅ API key authentication for bots and automation (Admin & Read-Only)
 - ✅ Role-based access control (RBAC)
 - ✅ First user automatically becomes admin
 - ✅ Admin-only write operations on notes
 - ✅ Public read access to notes (blog-style)
-- ✅ 23 comprehensive tests covering auth and authorization
+- ✅ 40+ comprehensive tests covering auth, authorization, and API keys
 
 ---
 
@@ -62,10 +64,12 @@ Hamco is a learning project demonstrating modern C# web development patterns:
 - **Role-Based Access Control** (Admin role)
 - **First User Becomes Admin** automatically
 - **Profile Endpoint** for authenticated users
+- **API Key Authentication** for bots and automation (Admin & Read-Only keys)
 
 #### Testing
 - **10 Auth Endpoint Tests** - Registration, login, profile, validation
 - **13 Notes Authorization Tests** - Admin write, public read, auth enforcement
+- **20+ API Key Tests** - Key generation, validation, permissions, revocation
 - **Integration Testing** with real database
 - **Success and failure path testing**
 
@@ -98,21 +102,27 @@ Hamco is a learning project demonstrating modern C# web development patterns:
 hamco/
 ├── src/
 │   ├── Hamco.Api/                  # Web API layer (Controllers, Program.cs)
-│   │   └── Controllers/
-│   │       ├── NotesController.cs  # CRUD endpoints with auth enforcement
-│   │       └── AuthController.cs   # Register/Login endpoints
+│   │   ├── Controllers/
+│   │   │   ├── NotesController.cs  # CRUD endpoints with auth enforcement
+│   │   │   ├── AuthController.cs   # Register/Login endpoints
+│   │   │   └── Admin/
+│   │   │       └── ApiKeysController.cs  # API key management (admin only)
+│   │   └── Middleware/
+│   │       └── ApiKeyMiddleware.cs # API key authentication middleware
 │   │
 │   ├── Hamco.Core/                 # Domain models, services, interfaces
 │   │   ├── Models/
 │   │   │   ├── Note.cs             # Note entity (UserId required)
 │   │   │   ├── User.cs             # User entity (IsAdmin, IsEmailVerified)
+│   │   │   ├── ApiKey.cs           # API key entity (authentication)
 │   │   │   ├── *Request.cs         # API request DTOs
 │   │   │   └── *Response.cs        # API response DTOs
 │   │   ├── Services/
 │   │   │   ├── IJwtService.cs      # JWT interface
 │   │   │   ├── JwtService.cs       # JWT implementation
 │   │   │   ├── IPasswordHasher.cs  # Password hasher interface
-│   │   │   └── PasswordHasher.cs   # BCrypt password hasher
+│   │   │   ├── PasswordHasher.cs   # BCrypt password hasher
+│   │   │   └── IApiKeyService.cs   # API key service interface
 │   │   ├── Utilities/
 │   │   │   └── SlugGenerator.cs    # URL slug generation
 │   │   └── Extensions/
@@ -122,14 +132,20 @@ hamco/
 │   │   ├── HamcoDbContext.cs       # EF Core DbContext
 │   │   └── Migrations/             # EF Core migration files
 │   │
-│   └── Hamco.Services/             # Application services (empty, reserved)
+│   └── Hamco.Services/             # Application services
+│       └── ApiKeyService.cs        # API key generation/validation
 │
 └── tests/
     ├── Hamco.Api.Tests/
     │   ├── AuthControllerTests.cs  # Auth endpoint tests (10 tests)
-    │   └── NotesControllerTests.cs # Notes authorization tests (13 tests)
+    │   ├── NotesControllerTests.cs # Notes authorization tests (13 tests)
+    │   ├── ApiKeyPermissionsTests.cs  # API key integration tests
+    │   └── Controllers/Admin/
+    │       └── ApiKeysControllerTests.cs  # API key controller tests
     │
-    └── Hamco.Core.Tests/           # Unit tests (empty, reserved)
+    └── Hamco.Core.Tests/           # Unit tests
+        └── Services/
+            └── ApiKeyServiceTests.cs  # API key service tests
 ```
 
 **Layer Responsibilities:**
@@ -165,9 +181,23 @@ hamco/
 | `updated_at` | timestamp | Default: now() | Last update time |
 | `deleted_at` | timestamp | Nullable | Soft delete timestamp (future) |
 
+### `api_keys` Table
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | string (GUID) | Primary Key | API key ID |
+| `name` | string | Required | Human-readable key name |
+| `key_hash` | string | Required | BCrypt hash of API key |
+| `key_prefix` | string(16) | Required | First 8 chars for display |
+| `is_admin` | boolean | Default: false | Admin privileges (full CRUD) |
+| `is_active` | boolean | Default: true | Whether key is active (soft delete) |
+| `expires_at` | timestamp | Nullable | Optional expiration date |
+| `created_at` | timestamp | Default: now() | When key was generated |
+| `created_by_user_id` | string | Foreign Key (optional) | Admin who created the key |
+
 **Relationships:**
 - `notes.user_id` → `users.id` (Many-to-One, Required)
-- Foreign key enforces referential integrity
+- `api_keys.created_by_user_id` → `users.id` (Many-to-One, Optional)
+- Foreign keys enforce referential integrity
 
 ---
 
@@ -221,7 +251,7 @@ hamco/
    dotnet run
    ```
 
-   API will start at: `https://localhost:5001` (or `http://localhost:5000`)
+   API will start at: `http://localhost:5250`
 
 ---
 
@@ -231,12 +261,12 @@ hamco/
 
 1. **Register First Admin User** (First user automatically becomes admin)
    ```bash
-   curl -X POST https://localhost:5001/api/auth/register \
+   curl -X POST http://localhost:5250/api/auth/register \
      -H "Content-Type: application/json" \
      -d '{
-       "username": "admin",
-       "email": "admin@example.com",
-       "password": "AdminPass123"
+       "username": "Art",
+       "email": "art@example.com",
+       "password": "Password123!"
      }'
    ```
    Response:
@@ -244,7 +274,7 @@ hamco/
    {
      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
      "userId": "a1b2c3d4-...",
-     "email": "admin@example.com",
+     "email": "art@example.com",
      "roles": [],
      "expiresAt": "2026-02-06T15:30:00Z"
    }
@@ -254,18 +284,18 @@ hamco/
    - Use token from registration, OR
    - Login to get a new token:
    ```bash
-   curl -X POST https://localhost:5001/api/auth/login \
+   curl -X POST http://localhost:5250/api/auth/login \
      -H "Content-Type: application/json" \
      -d '{
-       "email": "admin@example.com",
-       "password": "AdminPass123"
+       "email": "art@example.com",
+       "password": "Password123!"
      }'
    ```
 
 3. **Use Token in Requests**
    Include the token in the `Authorization` header:
    ```bash
-   curl https://localhost:5001/api/notes \
+   curl http://localhost:5250/api/notes \
      -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
    ```
 
@@ -293,6 +323,113 @@ hamco/
 - Reduces attack surface (write operations protected)
 - Clear separation of concerns (readers vs authors)
 - Easy to audit (all writes linked to authenticated admin)
+
+---
+
+## 🔑 API Keys
+
+### Overview
+
+API keys provide stateless authentication for bots, automation scripts, and third-party integrations. Unlike JWT tokens that require login and expire quickly, API keys are long-lived credentials designed for machine-to-machine communication.
+
+### Two Types of API Keys
+
+| Type | Permissions | Use Cases |
+|------|-------------|-----------|
+| **Admin API Keys** | Full CRUD access (Create, Read, Update, Delete) | CI/CD pipelines, admin bots, trusted automation |
+| **User API Keys** | Read-only access (GET endpoints only) | Monitoring tools, analytics, public API consumers |
+
+### Creating API Keys
+
+**Prerequisites:** Must be authenticated as an admin user.
+
+**1. Login to get admin JWT token:**
+```bash
+curl -X POST http://localhost:5250/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"art@example.com","password":"Password123!"}'
+```
+
+**2. Create an Admin API Key:**
+```bash
+curl -X POST http://localhost:5250/api/admin/api-keys \
+  -H "Authorization: Bearer <admin-jwt-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Production Bot","isAdmin":true}'
+```
+
+**3. Create a Read-Only API Key:**
+```bash
+curl -X POST http://localhost:5250/api/admin/api-keys \
+  -H "Authorization: Bearer <admin-jwt-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Monitoring Tool","isAdmin":false}'
+```
+
+**Response:**
+```json
+{
+  "key": "hamco_sk_a5637ebc079cc1774d4be8f3a4ea43ee604dfd62083986c5156ae2df775ce64d",
+  "id": "uuid-here",
+  "name": "Production Bot",
+  "prefix": "hamco_sk",
+  "isAdmin": true,
+  "createdAt": "2026-02-08T18:00:00Z",
+  "message": "Save this key securely. You won't see it again!"
+}
+```
+
+⚠️ **IMPORTANT:** Save the API key immediately! It's shown only once and cannot be retrieved later.
+
+### Using API Keys
+
+Include the API key in the `X-API-Key` header:
+
+```bash
+# List notes (works with any key type or no auth)
+curl http://localhost:5250/api/notes \
+  -H "X-API-Key: hamco_sk_a5637ebc079cc1774d4be8f3a4ea43ee604dfd62083986c5156ae2df775ce64d"
+
+# Create note (Admin API key required)
+curl -X POST http://localhost:5250/api/notes \
+  -H "X-API-Key: hamco_sk_a5637ebc079cc1774d4be8f3a4ea43ee604dfd62083986c5156ae2df775ce64d" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Automated Post","content":"Posted by bot!"}'
+```
+
+### API Key Format
+
+**Format:** `hamco_sk_<64-character-hex-string>`
+
+- **Prefix:** `hamco_sk_` (Hamco Secret Key)
+- **Hash:** 64 character SHA-256 hash
+- **Total Length:** 74 characters
+
+Example: `hamco_sk_a5637ebc079cc1774d4be8f3a4ea43ee604dfd62083986c5156ae2df775ce64d`
+
+### Security Best Practices
+
+1. **Store securely** - Use environment variables or secret management systems
+2. **Never commit to git** - Add API keys to `.gitignore`
+3. **Principle of least privilege** - Use read-only keys when write access isn't needed
+4. **Rotate regularly** - Generate new keys periodically (e.g., every 90 days)
+5. **Revoke compromised keys** - Immediately revoke if leaked
+
+### Managing API Keys
+
+**List all your API keys:**
+```bash
+curl http://localhost:5250/api/admin/api-keys \
+  -H "Authorization: Bearer <admin-jwt-token>"
+```
+
+**Revoke an API key:**
+```bash
+curl -X DELETE http://localhost:5250/api/admin/api-keys/{id} \
+  -H "Authorization: Bearer <admin-jwt-token>"
+```
+
+**📚 Detailed Documentation:** See [docs/API_KEY_PERMISSIONS.md](docs/API_KEY_PERMISSIONS.md) for complete permission matrix, testing guide, and troubleshooting.
 
 ---
 
@@ -540,6 +677,28 @@ dotnet test --verbosity detailed
 - ✅ `GetAllNotes_Public_Returns200` - Public read access
 - ✅ `GetNoteById_Public_Returns200` - Public read access
 - ✅ `GetNoteById_NotFound_Returns404` - Not found handling
+
+#### API Key Tests (20+ tests across 3 test files)
+**ApiKeyPermissionsTests** - Integration tests for API key authorization:
+- ✅ Admin API key can read/create/update/delete notes
+- ✅ User API key can read notes (list and single)
+- ✅ User API key cannot create/update/delete notes (403 Forbidden)
+- ✅ Invalid API key returns 401 Unauthorized
+- ✅ No API key works for public read endpoints
+
+**ApiKeysControllerTests** - Admin endpoint tests:
+- ✅ Generate API key (admin only)
+- ✅ List API keys (admin only)
+- ✅ Revoke API key (admin only)
+- ✅ Unauthorized access returns 401
+- ✅ Non-admin access returns 403
+
+**ApiKeyServiceTests** - Unit tests for service layer:
+- ✅ Key generation creates valid format (hamco_sk_...)
+- ✅ Key validation with BCrypt
+- ✅ Expired keys rejected
+- ✅ Revoked keys rejected
+- ✅ ClaimsPrincipal creation with correct roles
 
 ---
 

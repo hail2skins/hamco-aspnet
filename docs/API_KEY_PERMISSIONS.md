@@ -8,6 +8,8 @@ Hamco API supports two types of API keys with different permission levels:
 
 This document outlines the permission matrix and testing procedures.
 
+**📚 Quick Start:** See [main README](../README.md#-api-keys) for setup and basic usage examples.
+
 ## Permission Matrix
 
 | Operation | Endpoint | Admin API Key | User API Key | No Auth |
