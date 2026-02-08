@@ -155,6 +155,37 @@ public class HamcoDbContext : DbContext
     public DbSet<Note> Notes { get; set; } = null!;
 
     /// <summary>
+    /// Gets or sets the API Keys table.
+    /// Used to query and manage API key authentication.
+    /// </summary>
+    /// <remarks>
+    /// API Keys DbSet:
+    ///   Manages API keys for external agents and integrations.
+    ///   Similar to Users/Notes but for service-to-service auth.
+    /// 
+    /// Example operations:
+    ///   // Generate new key (done via ApiKeyService)
+    ///   var apiKey = new ApiKey { Name = "Bot", KeyHash = "..." };
+    ///   ApiKeys.Add(apiKey);
+    ///   await SaveChangesAsync();
+    ///   
+    ///   // Find active keys
+    ///   var activeKeys = await ApiKeys
+    ///       .Where(k => k.IsActive)
+    ///       .ToListAsync();
+    ///   
+    ///   // Revoke key (soft delete)
+    ///   apiKey.IsActive = false;
+    ///   await SaveChangesAsync();
+    /// 
+    /// Security:
+    ///   Never query for KeyHash and log it!
+    ///   KeyHash is sensitive (like PasswordHash).
+    ///   Use KeyPrefix for display/logging instead.
+    /// </remarks>
+    public DbSet<ApiKey> ApiKeys { get; set; } = null!;
+
+    /// <summary>
     /// Configures the database schema using Fluent API.
     /// Called by EF Core when building the database model.
     /// </summary>
@@ -322,6 +353,81 @@ public class HamcoDbContext : DbContext
             //   - NoAction: Do nothing (database may enforce constraint)
             // 
             // We use SetNull to preserve notes even if user is deleted.
+        });
+
+        // Configure ApiKey entity (maps to 'api_keys' table)
+        modelBuilder.Entity<ApiKey>(entity =>
+        {
+            // Table name: 'api_keys' (lowercase, snake_case, PostgreSQL convention)
+            entity.ToTable("api_keys");
+            
+            // Primary key: Id column (GUID as string)
+            entity.HasKey(e => e.Id);
+            
+            // Configure Id column
+            entity.Property(e => e.Id)
+                .HasColumnName("id")
+                .IsRequired();
+            
+            // Configure Name column (human-readable identifier)
+            entity.Property(e => e.Name)
+                .HasColumnName("name")
+                .IsRequired()
+                .HasMaxLength(255);
+            
+            // Configure KeyHash column (BCrypt hash, never plaintext!)
+            entity.Property(e => e.KeyHash)
+                .HasColumnName("key_hash")
+                .IsRequired()
+                .HasMaxLength(60); // BCrypt hash is exactly 60 chars
+            
+            // Configure KeyPrefix column (first 8 chars for display)
+            entity.Property(e => e.KeyPrefix)
+                .HasColumnName("key_prefix")
+                .IsRequired()
+                .HasMaxLength(8);
+            
+            // Configure IsAdmin column (determines role: Admin vs User)
+            entity.Property(e => e.IsAdmin)
+                .HasColumnName("is_admin")
+                .IsRequired()
+                .HasDefaultValue(false); // Default to non-admin (safer)
+            
+            // Configure ExpiresAt column (nullable, null = never expires)
+            entity.Property(e => e.ExpiresAt)
+                .HasColumnName("expires_at");
+            // Nullable - no .IsRequired()
+            
+            // Configure CreatedAt column (auto-set to current timestamp)
+            entity.Property(e => e.CreatedAt)
+                .HasColumnName("created_at")
+                .IsRequired()
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            
+            // Configure CreatedByUserId column (foreign key to users, not enforced)
+            entity.Property(e => e.CreatedByUserId)
+                .HasColumnName("created_by_user_id")
+                .HasMaxLength(36); // GUID length
+            // Not required (can be empty string or null)
+            
+            // Configure IsActive column (soft delete flag)
+            entity.Property(e => e.IsActive)
+                .HasColumnName("is_active")
+                .IsRequired()
+                .HasDefaultValue(true); // Default to active
+            
+            // Indexes for performance
+            // Index on IsActive (filter active keys quickly)
+            entity.HasIndex(e => e.IsActive)
+                .HasDatabaseName("ix_api_keys_is_active");
+            
+            // Index on KeyPrefix (optional future optimization for quick lookup)
+            entity.HasIndex(e => e.KeyPrefix)
+                .HasDatabaseName("ix_api_keys_key_prefix");
+            
+            // Index on CreatedByUserId (for "list my keys" queries)
+            entity.HasIndex(e => e.CreatedByUserId)
+                .HasDatabaseName("ix_api_keys_created_by_user_id");
         });
     }
 }
