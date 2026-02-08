@@ -74,6 +74,17 @@ The root `App.csproj` must include:
     </Content>
 </ItemGroup>
 
+<!-- CRITICAL FOR MVC: Include Razor views and static files -->
+<!-- Without these, Railway returns 500 errors (views not found) -->
+<ItemGroup>
+    <Content Include="src/Hamco.Api/Views/**/*.cshtml">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="src/Hamco.Api/wwwroot/**/*">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+</ItemGroup>
+
 <!-- ALL packages from ALL projects must be listed here -->
 <ItemGroup>
     <!-- When you add a package to src/Hamco.Api/ or src/Hamco.Services/,
@@ -165,6 +176,21 @@ grep "PackageReference" App.csproj | sort -u
 
 ---
 
+## MVC vs API-Only Apps
+
+**API-only apps** (just controllers, no views):
+- Only need `appsettings*.json` content
+- No Razor views or wwwroot to include
+
+**MVC apps with views** (what we have):
+- MUST include `Views/**/*.cshtml`
+- MUST include `wwwroot/**/*` (CSS, JS, images)
+- Returns 500 errors at runtime if views are missing
+
+**Date of lesson learned:** 2026-02-08 - 500 errors on Railway because views weren't included
+
+---
+
 ## Historical Context
 
 Read `memory/2026-02-06.md` for the full war story of getting Railway working.
@@ -175,6 +201,7 @@ Read `memory/2026-02-06.md` for the full war story of getting Railway working.
 - `ecfa191` - Disabled default content items  
 - `34300f4` - Added InterceptorsNamespaces
 - `0bb6648` - **RESTORED App.csproj after it was accidentally deleted**
+- `a44e115` - **Added Views and wwwroot content items (MVC fix)**
 
 ---
 
