@@ -60,12 +60,21 @@ if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
 var contentRoot = AppContext.BaseDirectory;
 var webRoot = Path.Combine(contentRoot, "wwwroot");
 
+// Determine if we're running from the root App.csproj (Railway deployment)
+// Entry assembly name will be "App" when running from published output
+// For tests, entry assembly will be "testhost" or test project name
+var entryAssembly = System.Reflection.Assembly.GetEntryAssembly();
+var isRunningFromRootApp = entryAssembly?.GetName().Name == "App";
+
+// Create builder with conditional ApplicationName
+// Only set ApplicationName when running from App.csproj to prevent MVC from
+// trying to load "App" assembly during tests (WebApplicationFactory uses different assembly context)
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
     ContentRootPath = contentRoot,
     WebRootPath = webRoot,
-    ApplicationName = "App" // Match the assembly name from App.csproj
+    ApplicationName = isRunningFromRootApp ? "App" : null // Match the assembly name from App.csproj only when needed
 });
 
 // ============================================================================
@@ -116,15 +125,19 @@ Console.WriteLine("=================================");
 //   - Action result execution (return Ok(), NotFound(), etc.)
 //   - View rendering engine (Razor)
 //
-// AddApplicationPart() tells MVC to scan this assembly for controllers
-// This is needed because our root project (App.csproj) compiles all source into one assembly
+// AddApplicationPart() configuration:
+//   - Railway deployment (App.csproj root): Add application part explicitly
+//   - Testing (WebApplicationFactory): Skip AddApplicationPart (different assembly context)
 //
-// AddRazorRuntimeCompilation() enables runtime compilation of Razor views
-// This allows views to be loaded from disk at runtime (needed for Railway publish)
-// Without this, views must be pre-compiled into the assembly
-builder.Services.AddControllersWithViews()
-    .AddApplicationPart(typeof(Program).Assembly)
-    .AddRazorRuntimeCompilation();
+// Solution: Only add application part when running from App.csproj (Railway scenario)
+// This allows tests to work (loads Hamco.Api assembly) while Railway still works (loads App assembly)
+var mvcBuilder = builder.Services.AddControllersWithViews();
+
+if (isRunningFromRootApp)
+{
+    // Railway deployment: Add application part to load controllers from root assembly
+    mvcBuilder.AddApplicationPart(typeof(Program).Assembly);
+}
 
 // Add API Explorer for OpenAPI/Swagger
 // AddEndpointsApiExplorer() enables automatic API documentation:
