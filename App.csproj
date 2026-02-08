@@ -22,6 +22,16 @@
     </Content>
   </ItemGroup>
 
+  <!-- Include Razor views and static files -->
+  <ItemGroup>
+    <Content Include="src/Hamco.Api/Views/**/*.cshtml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="src/Hamco.Api/wwwroot/**/*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <!-- All package references from all projects -->
   <ItemGroup>
     <!-- From Hamco.Api -->
