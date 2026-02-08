@@ -258,6 +258,19 @@ builder.Services.AddSingleton<IImageRandomizer, ImageRandomizer>();
 builder.Services.AddMemoryCache();
 
 // ============================================================================
+// RAILWAY PORT CONFIGURATION
+// ============================================================================
+// Railway provides the PORT environment variable (typically 8080)
+// We need to configure the app to listen on this port
+// If PORT is not set (local dev), the app uses default ports from launchSettings.json
+
+var railwayPort = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(railwayPort))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{railwayPort}");
+}
+
+// ============================================================================
 // BUILD APPLICATION
 // ============================================================================
 
@@ -329,6 +342,12 @@ if (app.Environment.IsDevelopment())
 // Maps requests like /css/styles.css to wwwroot/css/styles.css
 // Must come before routing so static files bypass controller execution
 app.UseStaticFiles();
+
+// Enable routing middleware
+// app.UseRouting() creates the route table and matches incoming URLs to endpoints
+// REQUIRED for MVC with views to work - must come before auth and endpoint mapping
+// Without this, attribute routes like [HttpGet("/")] won't be matched
+app.UseRouting();
 
 // Enable authentication middleware
 // app.UseAuthentication() middleware:
