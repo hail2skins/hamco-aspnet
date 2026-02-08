@@ -68,20 +68,25 @@ public class Note
     public string Content { get; set; } = string.Empty;
     
     /// <summary>
-    /// ID of the user who created this note. Required field.
+    /// ID of the user who created this note. Nullable to support API key authentication.
     /// </summary>
     /// <remarks>
-    /// Changed from nullable (string?) to required (string).
-    /// Now that authentication is enforced, every note must have an owner.
+    /// This field can be null in two scenarios:
+    /// 1. API key authentication (API keys don't have corresponding users)
+    /// 2. Anonymous notes (during development)
     /// 
-    /// The value is extracted from JWT token when user creates a note:
+    /// For JWT authentication, the value is extracted from JWT token:
     ///   var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     ///   note.UserId = userId;
     /// 
+    /// For API key authentication, UserId is set to null:
+    ///   var authMethod = User.FindFirst("auth_method")?.Value;
+    ///   note.UserId = (authMethod == "api_key") ? null : userId;
+    /// 
     /// This creates a foreign key relationship to the users table.
-    /// EF Core will enforce referential integrity.
+    /// EF Core will enforce referential integrity when UserId is not null.
     /// </remarks>
-    public string UserId { get; set; } = string.Empty;
+    public string? UserId { get; set; }
     
     /// <summary>
     /// UTC timestamp when this note was created.

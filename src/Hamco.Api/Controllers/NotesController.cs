@@ -181,16 +181,27 @@ public class NotesController : ControllerBase
     [Authorize(Roles = "Admin")]  // Only administrators can create notes
     public async Task<ActionResult<NoteResponse>> CreateNote(CreateNoteRequest request)
     {
-        // Step 1: Extract user ID from JWT token
-        // User.FindFirst() searches for claim by type
-        // ClaimTypes.NameIdentifier contains the user ID we added in JwtService
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        // Step 1: Detect authentication method and extract user ID
+        var authMethod = User.FindFirst("auth_method")?.Value;
+        string? userId = null;
         
-        if (string.IsNullOrEmpty(userId))
+        if (authMethod == "api_key")
         {
-            // Should never happen if [Authorize] is working correctly
-            // But defensive programming: verify we have a user ID
-            return Unauthorized(new { message = "User ID not found in token" });
+            // API key authentication - UserId will be null
+            // API keys don't have a corresponding user in the Users table
+            userId = null;
+        }
+        else
+        {
+            // JWT authentication - extract user ID from token
+            userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (string.IsNullOrEmpty(userId))
+            {
+                // Should never happen if [Authorize] is working correctly
+                // But defensive programming: verify we have a user ID
+                return Unauthorized(new { message = "User ID not found in token" });
+            }
         }
         
         // Step 2: Create Note entity from request DTO
@@ -201,7 +212,7 @@ public class NotesController : ControllerBase
             Title = request.Title,  // From user input
             Slug = SlugGenerator.GenerateSlug(request.Title),  // Auto-generated
             Content = request.Content,  // From user input
-            UserId = userId,  // From authenticated user's JWT token
+            UserId = userId,  // From authenticated user's JWT token, or null for API keys
             CreatedAt = DateTime.UtcNow,  // Current UTC time
             UpdatedAt = DateTime.UtcNow   // Same as CreatedAt initially
         };

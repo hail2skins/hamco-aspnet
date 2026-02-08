@@ -229,7 +229,8 @@ public class AuthController : ControllerBase
             // Email not verified yet (future: send verification email via Mailjet)
             IsEmailVerified = false,
             
-            // Roles left empty (default: new List<string>())
+            // Assign Admin role to first user for consistency
+            Roles = isFirstUser ? new List<string> { "Admin" } : new List<string>()
         };
 
         // Step 4: Add user to database
@@ -364,10 +365,14 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid email or password" });
         }
 
-        // Step 3: Generate JWT token for authenticated user
+        // Step 3: Ensure roles are populated from IsAdmin flag
+        // (In case user was created before this fix, or roles not set in DB)
+        EnsureRolesPopulated(user);
+
+        // Step 4: Generate JWT token for authenticated user
         var token = _jwtService.GenerateToken(user);
 
-        // Step 4: Return authentication response
+        // Step 5: Return authentication response
         // Same response as Register (consistent API)
         return Ok(new AuthResponse
         {
@@ -500,5 +505,32 @@ public class AuthController : ControllerBase
             message = "Password reset (not implemented yet). " +
                       "Future: Will validate token and update password hash."
         });
+    }
+
+    /// <summary>
+    /// Helper method to ensure user's Roles list reflects their IsAdmin status.
+    /// </summary>
+    /// <param name="user">User to update roles for.</param>
+    /// <remarks>
+    /// This ensures consistency between IsAdmin flag and Roles list.
+    /// Needed because:
+    /// 1. Roles list is not persisted to database (see HamcoDbContext)
+    /// 2. Must be populated when user is loaded from DB
+    /// 3. JWT token generation reads both IsAdmin and Roles
+    /// 
+    /// Called during login and registration to ensure response includes correct roles.
+    /// </remarks>
+    private void EnsureRolesPopulated(User user)
+    {
+        // If user is admin but Roles doesn't contain "Admin", add it
+        if (user.IsAdmin && !user.Roles.Contains("Admin"))
+        {
+            user.Roles.Add("Admin");
+        }
+        // If user is not admin but Roles contains "Admin", remove it
+        else if (!user.IsAdmin && user.Roles.Contains("Admin"))
+        {
+            user.Roles.Remove("Admin");
+        }
     }
 }

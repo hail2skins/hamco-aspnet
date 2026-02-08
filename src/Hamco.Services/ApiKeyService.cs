@@ -224,7 +224,7 @@ public class ApiKeyService : IApiKeyService
     ///   - NameIdentifier: ApiKey.Id (unique identifier)
     ///   - Email: "apikey:{Name}" (human-readable, for logs)
     ///   - Role: "Admin" or "User" (for authorization)
-    ///   - Custom: "api_key_id", "auth_method" (for analytics)
+    ///   - Custom: "api_key_id", "api_key_name", "auth_method" (for analytics)
     /// 
     /// Authentication Type:
     ///   "ApiKey" - distinguishes from "Bearer" (JWT) auth
@@ -246,6 +246,7 @@ public class ApiKeyService : IApiKeyService
             
             // Custom claims (for analytics and debugging)
             new Claim("api_key_id", apiKey.Id),
+            new Claim("api_key_name", apiKey.Name),
             new Claim("auth_method", "api_key")
         };
 
