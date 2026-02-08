@@ -45,7 +45,60 @@ if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
 // C# 9+ top-level statements:
 //   This code runs directly without wrapping in Main() method
 //   Compiler generates: static void Main(string[] args) { ... } automatically
-var builder = WebApplication.CreateBuilder(args);
+
+// ============================================================================
+// CONTENT ROOT CONFIGURATION (Critical for Railway)
+// ============================================================================
+// When running from root App.csproj (Railway), the content root defaults to
+// the project root (/app/) but views are in src/Hamco.Api/Views/.
+// We need to set content root to the actual API project directory.
+//
+// Local dev: runs from src/Hamco.Api/ - content root is correct
+// Railway: runs from root - content root needs to point to src/Hamco.Api/
+
+var apiProjectPath = Path.Combine(AppContext.BaseDirectory, "src", "Hamco.Api");
+// If src/Hamco.Api exists relative to base directory, use it as content root
+// Otherwise (local dev), use the default
+var contentRoot = Directory.Exists(apiProjectPath) 
+    ? apiProjectPath 
+    : Directory.GetCurrentDirectory();
+
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = contentRoot,
+    ApplicationName = "Hamco.Api"
+});
+
+// ============================================================================
+// STARTUP DIAGNOSTICS (Railway Debugging)
+// ============================================================================
+// Log critical paths and configuration to help debug Railway deployment
+Console.WriteLine("=== HAMCO STARTUP DIAGNOSTICS ===");
+Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
+Console.WriteLine($"Content Root: {builder.Environment.ContentRootPath}");
+Console.WriteLine($"Web Root: {builder.Environment.WebRootPath}");
+Console.WriteLine($"Application Name: {builder.Environment.ApplicationName}");
+
+// Check if Views directory exists
+var viewsPath = Path.Combine(builder.Environment.ContentRootPath, "Views");
+var viewsExist = Directory.Exists(viewsPath);
+Console.WriteLine($"Views directory exists: {viewsExist} (Path: {viewsPath})");
+
+if (viewsExist)
+{
+    var viewFiles = Directory.GetFiles(viewsPath, "*.cshtml", SearchOption.AllDirectories);
+    Console.WriteLine($"Found {viewFiles.Length} .cshtml files");
+}
+
+// Check if wwwroot directory exists
+var wwwrootPath = builder.Environment.WebRootPath;
+var wwwrootExist = Directory.Exists(wwwrootPath);
+Console.WriteLine($"wwwroot directory exists: {wwwrootExist} (Path: {wwwrootPath})");
+
+Console.WriteLine($"Railway PORT: {Environment.GetEnvironmentVariable("PORT") ?? "not set"}");
+Console.WriteLine($"DATABASE_URL: {(string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")) ? "not set" : "set")}");
+Console.WriteLine("=================================");
 
 // ============================================================================
 // SERVICE CONFIGURATION (Dependency Injection Container)
@@ -301,6 +354,12 @@ var app = builder.Build();
 //   3. Authorization (check permissions)
 //   4. Routing (match URL to controller action)
 //   5. Controller execution (your code)
+
+// Enable developer exception page for detailed error information
+// This shows stack traces, exception details, and request info when errors occur
+// Temporarily enabled for Railway debugging (normally only in Development)
+// TODO: Change to app.Environment.IsDevelopment() once Railway deployment is stable
+app.UseDeveloperExceptionPage();
 
 // Enable OpenAPI UI in development environment
 // app.Environment.IsDevelopment() checks if:
