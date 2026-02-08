@@ -49,25 +49,23 @@ if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
 // ============================================================================
 // CONTENT ROOT CONFIGURATION (Critical for Railway)
 // ============================================================================
-// When running from root App.csproj (Railway), the content root defaults to
-// the project root (/app/) but views are in src/Hamco.Api/Views/.
-// We need to set content root to the actual API project directory.
+// When running from published output (dotnet publish), the content root should be
+// the directory containing the executable (AppContext.BaseDirectory).
+// Views and wwwroot are now at the root of the publish output, not nested.
 //
-// Local dev: runs from src/Hamco.Api/ - content root is correct
-// Railway: runs from root - content root needs to point to src/Hamco.Api/
+// AppContext.BaseDirectory = /app/ (Railway) or /path/to/out/ (local publish)
+// Views location: /app/Views/ (not /app/src/Hamco.Api/Views/)
+// wwwroot location: /app/wwwroot/ (not /app/src/Hamco.Api/wwwroot/)
 
-var apiProjectPath = Path.Combine(AppContext.BaseDirectory, "src", "Hamco.Api");
-// If src/Hamco.Api exists relative to base directory, use it as content root
-// Otherwise (local dev), use the default
-var contentRoot = Directory.Exists(apiProjectPath) 
-    ? apiProjectPath 
-    : Directory.GetCurrentDirectory();
+var contentRoot = AppContext.BaseDirectory;
+var webRoot = Path.Combine(contentRoot, "wwwroot");
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
     ContentRootPath = contentRoot,
-    ApplicationName = "Hamco.Api"
+    WebRootPath = webRoot,
+    ApplicationName = "App" // Match the assembly name from App.csproj
 });
 
 // ============================================================================
@@ -117,7 +115,16 @@ Console.WriteLine("=================================");
 //   - JSON serialization (System.Text.Json by default)
 //   - Action result execution (return Ok(), NotFound(), etc.)
 //   - View rendering engine (Razor)
-builder.Services.AddControllersWithViews();
+//
+// AddApplicationPart() tells MVC to scan this assembly for controllers
+// This is needed because our root project (App.csproj) compiles all source into one assembly
+//
+// AddRazorRuntimeCompilation() enables runtime compilation of Razor views
+// This allows views to be loaded from disk at runtime (needed for Railway publish)
+// Without this, views must be pre-compiled into the assembly
+builder.Services.AddControllersWithViews()
+    .AddApplicationPart(typeof(Program).Assembly)
+    .AddRazorRuntimeCompilation();
 
 // Add API Explorer for OpenAPI/Swagger
 // AddEndpointsApiExplorer() enables automatic API documentation:

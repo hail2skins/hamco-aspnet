@@ -176,18 +176,41 @@ grep "PackageReference" App.csproj | sort -u
 
 ---
 
-## MVC vs API-Only Apps
+## MVC Web App Requirements (CRITICAL)
 
 **API-only apps** (just controllers, no views):
 - Only need `appsettings*.json` content
 - No Razor views or wwwroot to include
 
 **MVC apps with views** (what we have):
-- MUST include `Views/**/*.cshtml`
-- MUST include `wwwroot/**/*` (CSS, JS, images)
-- Returns 500 errors at runtime if views are missing
+- MUST include `Views/**/*.cshtml` in root `App.csproj`
+- MUST include `wwwroot/**/*` (CSS, JS, images)  
+- MUST set correct **Content Root** in `Program.cs`
+- Returns 500 errors at runtime if any of these are wrong
 
-**Date of lesson learned:** 2026-02-08 - 500 errors on Railway because views weren't included
+### Content Root Configuration
+
+When running from root `App.csproj`, the content root defaults to the root directory, but views are in `src/Hamco.Api/Views/`. **You must set the content root explicitly:**
+
+```csharp
+var apiProjectPath = Path.Combine(AppContext.BaseDirectory, "src", "Hamco.Api");
+var contentRoot = Directory.Exists(apiProjectPath) 
+    ? apiProjectPath   // Railway: root App.csproj
+    : Directory.GetCurrentDirectory();  // Local: src/Hamco.Api/
+
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = contentRoot,
+    ApplicationName = "Hamco.Api"
+});
+```
+
+**Without this:** `The view 'Index' was not found. Searched locations: /Views/Home/Index.cshtml`
+
+**Lessons learned:**
+- 2026-02-08 16:00 - 500 errors because views weren't in App.csproj Content items
+- 2026-02-08 16:20 - 500 errors because content root was wrong (looked in /Views/ instead of /src/Hamco.Api/Views/)
 
 ---
 

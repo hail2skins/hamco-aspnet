@@ -8,6 +8,11 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <EnableDefaultContentItems>false</EnableDefaultContentItems>
     <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
+    <!-- Set proper assembly name and root namespace for MVC discovery -->
+    <AssemblyName>App</AssemblyName>
+    <RootNamespace>Hamco.Api</RootNamespace>
+    <!-- Preserve compilation context for Razor runtime compilation -->
+    <PreserveCompilationContext>true</PreserveCompilationContext>
   </PropertyGroup>
 
   <!-- Include all source files from all projects -->
@@ -22,14 +27,24 @@
     </Content>
   </ItemGroup>
 
-  <!-- Include Razor views and static files -->
+  <!-- Include Razor views for dotnet publish -->
+  <!-- Use None instead of Content to avoid automatic processing -->
+  <!-- CopyToPublishDirectory with Link metadata flattens the path structure -->
   <ItemGroup>
-    <Content Include="src/Hamco.Api/Views/**/*.cshtml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="src/Hamco.Api/wwwroot/**/*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <None Include="src/Hamco.Api/Views/**/*.cshtml">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <Link>Views/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <PublishItemType>Content</PublishItemType>
+    </None>
+  </ItemGroup>
+
+  <!-- Include static web assets (wwwroot) for dotnet publish -->
+  <ItemGroup>
+    <None Include="src/Hamco.Api/wwwroot/**/*">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <Link>wwwroot/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <PublishItemType>Content</PublishItemType>
+    </None>
   </ItemGroup>
 
   <!-- All package references from all projects -->
@@ -37,6 +52,7 @@
     <!-- From Hamco.Api -->
     <PackageReference Include="dotenv.net" Version="4.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
