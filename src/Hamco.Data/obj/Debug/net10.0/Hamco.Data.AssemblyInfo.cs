@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Hamco.Data")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0487549e35b80d74c3f44903c00c1766c6ca4dd8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1605c92ad776c8ee6e3e355ea70721ae0ce69bfb")]
 [assembly: System.Reflection.AssemblyProductAttribute("Hamco.Data")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Hamco.Data")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
