@@ -814,8 +814,10 @@
       },
       "Hamco.Services/1.0.0": {
         "dependencies": {
+          "BCrypt.Net-Next": "4.0.3",
           "Hamco.Core": "1.0.0",
-          "Hamco.Data": "1.0.0"
+          "Hamco.Data": "1.0.0",
+          "Microsoft.EntityFrameworkCore": "10.0.2"
         },
         "runtime": {
           "Hamco.Services.dll": {

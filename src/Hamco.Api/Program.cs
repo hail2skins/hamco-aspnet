@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Hamco.Data;
 using Hamco.Core.Extensions;
+using Hamco.Core.Services;
+using Hamco.Services;
+using Hamco.Api.Middleware;
 using Microsoft.Data.Sqlite;
 using dotenv.net;
 
@@ -225,6 +228,12 @@ var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
 //   - Single responsibility (auth setup in one place)
 builder.Services.AddAuthServices(jwtKey, jwtIssuer, jwtAudience);
 
+// Register API Key service
+// IApiKeyService: Manages API key generation, validation, and revocation
+// ApiKeyService: Implementation using BCrypt hashing
+// Scoped lifetime: One instance per HTTP request (uses DbContext)
+builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
+
 // ============================================================================
 // BUILD APPLICATION
 // ============================================================================
@@ -301,6 +310,22 @@ if (app.Environment.IsDevelopment())
 // JWT validation configured in ServiceCollectionExtensions.AddAuthServices()
 app.UseAuthentication();
 
+// Enable API key authentication middleware
+// app.UseApiKeyAuthentication() middleware:
+//   - Reads X-API-Key header
+//   - Validates key against database (if no JWT auth)
+//   - Populates HttpContext.User with API key claims
+//   - Passes to next middleware if no key or key invalid
+//
+// Must come AFTER UseAuthentication() (so JWT takes precedence)
+// Must come BEFORE UseAuthorization() (so key auth sets user before auth checks)
+//
+// Authentication priority:
+//   1. JWT Bearer token (if present)
+//   2. API Key (if no JWT and X-API-Key header present)
+//   3. Anonymous (if neither)
+app.UseApiKeyAuthentication();
+
 // Enable authorization middleware
 // app.UseAuthorization() middleware:
 //   - Checks if user has permission for requested endpoint
@@ -309,7 +334,7 @@ app.UseAuthentication();
 //   - Returns 401/403 if unauthorized
 //   - Passes to next middleware if authorized
 //
-// Must come AFTER UseAuthentication()!
+// Must come AFTER UseAuthentication() and UseApiKeyAuthentication()!
 // Authorization = "What can you do?" (permissions)
 //
 // Example:

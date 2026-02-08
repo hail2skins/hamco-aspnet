@@ -1044,8 +1044,10 @@
         "type": "project",
         "framework": ".NETCoreApp,Version=v10.0",
         "dependencies": {
+          "BCrypt.Net-Next": "4.0.3",
           "Hamco.Core": "1.0.0",
-          "Hamco.Data": "1.0.0"
+          "Hamco.Data": "1.0.0",
+          "Microsoft.EntityFrameworkCore": "10.0.2"
         },
         "compile": {
           "bin/placeholder/Hamco.Services.dll": {}
