@@ -363,7 +363,9 @@ if (!app.Environment.IsEnvironment("Testing"))
         catch (Exception ex)
         {
             Console.WriteLine($"Error applying migrations: {ex.Message}");
-            // Don't crash - let the app start anyway (Railway will restart if unhealthy)
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            Console.WriteLine($"Inner exception: {ex.InnerException?.Message}");
+            throw; // Re-throw so Railway shows the full error
         }
     }
 }
