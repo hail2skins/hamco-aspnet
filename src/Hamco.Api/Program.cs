@@ -234,6 +234,12 @@ builder.Services.AddAuthServices(jwtKey, jwtIssuer, jwtAudience);
 // Scoped lifetime: One instance per HTTP request (uses DbContext)
 builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 
+// Register Markdown rendering service
+// IMarkdownService: Renders Markdown to HTML with syntax highlighting and XSS protection
+// MarkdownService: Implementation using Markdig + Markdown.ColorCode + HtmlSanitizer
+// Scoped lifetime: One instance per HTTP request
+builder.Services.AddScoped<IMarkdownService, MarkdownService>();
+
 // ============================================================================
 // BUILD APPLICATION
 // ============================================================================
