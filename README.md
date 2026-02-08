@@ -369,7 +369,7 @@ curl -X POST http://localhost:5250/api/admin/api-keys \
 **Response:**
 ```json
 {
-  "key": "hamco_sk_a5637ebc079cc1774d4be8f3a4ea43ee604dfd62083986c5156ae2df775ce64d",
+  "key": "hamco_sk_YOUR_API_KEY_HERE",
   "id": "uuid-here",
   "name": "Production Bot",
   "prefix": "hamco_sk",
@@ -388,11 +388,11 @@ Include the API key in the `X-API-Key` header:
 ```bash
 # List notes (works with any key type or no auth)
 curl http://localhost:5250/api/notes \
-  -H "X-API-Key: hamco_sk_a5637ebc079cc1774d4be8f3a4ea43ee604dfd62083986c5156ae2df775ce64d"
+  -H "X-API-Key: hamco_sk_YOUR_API_KEY_HERE"
 
 # Create note (Admin API key required)
 curl -X POST http://localhost:5250/api/notes \
-  -H "X-API-Key: hamco_sk_a5637ebc079cc1774d4be8f3a4ea43ee604dfd62083986c5156ae2df775ce64d" \
+  -H "X-API-Key: hamco_sk_YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json" \
   -d '{"title":"Automated Post","content":"Posted by bot!"}'
 ```
@@ -405,7 +405,7 @@ curl -X POST http://localhost:5250/api/notes \
 - **Hash:** 64 character SHA-256 hash
 - **Total Length:** 74 characters
 
-Example: `hamco_sk_a5637ebc079cc1774d4be8f3a4ea43ee604dfd62083986c5156ae2df775ce64d`
+Example: `hamco_sk_YOUR_API_KEY_HERE`
 
 ### Security Best Practices
 

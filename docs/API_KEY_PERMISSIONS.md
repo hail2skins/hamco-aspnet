@@ -222,7 +222,7 @@ Hamco API keys use the format: `hamco_sk_<64-character-hex-string>`
 
 - **Prefix**: `hamco_sk_` (Hamco Secret Key)
 - **Hash**: 64 character SHA-256 hash
-- **Example**: `hamco_sk_a5637ebc079cc1774d4be8f3a4ea43ee604dfd62083986c5156ae2df775ce64d`
+- **Example**: `hamco_sk_YOUR_API_KEY_HERE`
 
 The prefix allows for:
 - Easy identification in logs and code
