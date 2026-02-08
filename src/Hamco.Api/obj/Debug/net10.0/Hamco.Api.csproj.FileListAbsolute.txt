@@ -172,3 +172,9 @@
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/HtmlSanitizer.dll
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/Markdig.dll
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/Markdown.ColorCode.dll
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/obj/Debug/net10.0/Hamco.Api.RazorAssemblyInfo.cache
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/obj/Debug/net10.0/Hamco.Api.RazorAssemblyInfo.cs
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/Hamco.Api.staticwebassets.runtime.json
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/obj/Debug/net10.0/compressed/3sirdn4gd8-{0}-pfvaznl385-pfvaznl385.gz
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/obj/Debug/net10.0/compressed/z8na166nmt-{0}-devepoo3hg-devepoo3hg.gz
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/obj/Debug/net10.0/compressed/kp2j29s96v-{0}-p4lq35ccgl-p4lq35ccgl.gz

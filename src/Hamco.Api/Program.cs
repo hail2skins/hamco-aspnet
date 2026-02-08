@@ -56,14 +56,15 @@ var builder = WebApplication.CreateBuilder(args);
 //   - Scoped: One instance per HTTP request (most common for DbContext)
 //   - Transient: New instance every time it's requested
 
-// Add MVC controllers
-// AddControllers() registers all controller-related services:
+// Add MVC controllers with views
+// AddControllersWithViews() registers MVC services including:
 //   - Controller activation (create controller instances)
 //   - Model binding (map HTTP request data to method parameters)
 //   - Model validation (check Data Annotations like [Required])
 //   - JSON serialization (System.Text.Json by default)
 //   - Action result execution (return Ok(), NotFound(), etc.)
-builder.Services.AddControllers();
+//   - View rendering engine (Razor)
+builder.Services.AddControllersWithViews();
 
 // Add API Explorer for OpenAPI/Swagger
 // AddEndpointsApiExplorer() enables automatic API documentation:
@@ -240,6 +241,22 @@ builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 // Scoped lifetime: One instance per HTTP request
 builder.Services.AddScoped<IMarkdownService, MarkdownService>();
 
+// Register slogan randomizer service
+// ISloganRandomizer: Gets random active slogans from database
+// SloganRandomizer: Implementation with in-memory caching
+// Scoped lifetime: One instance per HTTP request
+builder.Services.AddScoped<ISloganRandomizer, SloganRandomizer>();
+
+// Register image randomizer service
+// IImageRandomizer: Gets random header background images
+// ImageRandomizer: Implementation with static image list
+// Singleton lifetime: One instance for entire application (no state, just random selection)
+builder.Services.AddSingleton<IImageRandomizer, ImageRandomizer>();
+
+// Add in-memory caching for slogan service
+// IMemoryCache: Used by SloganRandomizer to cache database queries
+builder.Services.AddMemoryCache();
+
 // ============================================================================
 // BUILD APPLICATION
 // ============================================================================
@@ -301,6 +318,17 @@ if (app.Environment.IsDevelopment())
 // Production (Railway): Railway provides HTTPS at the edge
 //
 // Commented out: app.UseHttpsRedirection();
+
+// Enable static files middleware
+// app.UseStaticFiles() serves static files from wwwroot folder:
+//   - CSS files (wwwroot/css/*)
+//   - JavaScript files (wwwroot/js/*)
+//   - Images (wwwroot/img/*)
+//   - Favicon (wwwroot/img/favicon.ico)
+//
+// Maps requests like /css/styles.css to wwwroot/css/styles.css
+// Must come before routing so static files bypass controller execution
+app.UseStaticFiles();
 
 // Enable authentication middleware
 // app.UseAuthentication() middleware:
