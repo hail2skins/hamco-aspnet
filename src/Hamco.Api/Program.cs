@@ -18,15 +18,15 @@ using dotenv.net;
 // Think of this as the "main()" method for web applications.
 // ============================================================================
 
-// Load .env file BEFORE creating builder (so env vars are available for configuration)
-// DotEnv.Load() reads .env file in project root and sets environment variables
-// These variables then become available via Environment.GetEnvironmentVariable()
-// and are picked up by builder.Configuration
+// Load .env file ONLY for local development (when DATABASE_URL is not set)
+// Railway, Heroku, etc. provide env vars directly, so we skip .env loading
+// to avoid local dev settings overriding production configuration
 //
-// .env file contains secrets (DB passwords, JWT keys) that should NOT be committed
-// Railway and other hosts provide env vars directly, so this is safe to run
-// (will just do nothing if .env doesn't exist)
-DotEnv.Load();
+// Priority: Environment variables (Railway) > .env file (local dev) > defaults
+if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
+{
+    DotEnv.Load();
+}
 
 // Step 1: Create application builder
 // WebApplication.CreateBuilder() initializes the application:
@@ -132,14 +132,6 @@ else
     //
     // Railway provides DATABASE_URL like: postgres://user:password@host:port/database
     // We parse this and also support individual DB_HOST, DB_PORT, etc.
-    
-    // DEBUG: Log all environment variables related to DB
-    Console.WriteLine("=== DEBUG: Environment Variables ===");
-    Console.WriteLine($"DATABASE_URL: {Environment.GetEnvironmentVariable("DATABASE_URL") ?? "NOT SET"}");
-    Console.WriteLine($"DB_HOST: {Environment.GetEnvironmentVariable("DB_HOST") ?? "NOT SET"}");
-    Console.WriteLine($"PGHOST: {Environment.GetEnvironmentVariable("PGHOST") ?? "NOT SET"}");
-    Console.WriteLine($"ASPNETCORE_ENVIRONMENT: {Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "NOT SET"}");
-    Console.WriteLine("=====================================");
 
     string connectionString;
 
