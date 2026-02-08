@@ -1,0 +1,54 @@
+@model IEnumerable<Hamco.Core.Models.Note>
+@{
+    Layout = "_Layout";
+    ViewBag.Title = "Admin Notes";
+}
+
+<div class="row gx-4 gx-lg-5 justify-content-center">
+    <div class="col-md-10 col-lg-8 col-xl-7">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Manage Notes</h2>
+            <a asp-action="Create" class="btn btn-primary">Create New Note</a>
+        </div>
+
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Slug</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var note in Model)
+                        {
+                            <tr>
+                                <td>@note.Id</td>
+                                <td>@note.Title</td>
+                                <td>@note.Slug</td>
+                                <td>@note.CreatedAt.ToString("MM/dd/yyyy")</td>
+                                <td>@note.UpdatedAt.ToString("MM/dd/yyyy")</td>
+                                <td>
+                                    <a asp-action="Edit" asp-route-id="@note.Id" class="btn btn-sm btn-warning">Edit</a>
+                                    <a asp-action="Delete" asp-route-id="@note.Id" class="btn btn-sm btn-danger">Delete</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <p class="mb-0">No notes found. <a asp-action="Create">Create your first note</a></p>
+            </div>
+        }
+    </div>
+</div>

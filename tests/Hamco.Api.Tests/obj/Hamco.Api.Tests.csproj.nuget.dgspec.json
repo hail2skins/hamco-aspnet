@@ -1618,6 +1618,9 @@
               },
               "/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Data/Hamco.Data.csproj": {
                 "projectPath": "/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Data/Hamco.Data.csproj"
+              },
+              "/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Services/Hamco.Services.csproj": {
+                "projectPath": "/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Services/Hamco.Services.csproj"
               }
             }
           }
@@ -1638,6 +1641,10 @@
         "net10.0": {
           "targetAlias": "net10.0",
           "dependencies": {
+            "HtmlAgilityPack": {
+              "target": "Package",
+              "version": "[1.12.4, )"
+            },
             "Microsoft.AspNetCore.Mvc.Testing": {
               "target": "Package",
               "version": "[10.0.2, )"

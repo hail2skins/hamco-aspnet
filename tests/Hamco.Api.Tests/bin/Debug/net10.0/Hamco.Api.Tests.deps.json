@@ -41,6 +41,8 @@
           "Hamco.Api": "1.0.0",
           "Hamco.Core": "1.0.0",
           "Hamco.Data": "1.0.0",
+          "Hamco.Services": "1.0.0",
+          "HtmlAgilityPack": "1.12.4",
           "Microsoft.AspNetCore.Mvc.Testing": "10.0.2",
           "Microsoft.EntityFrameworkCore.InMemory": "10.0.2",
           "Microsoft.EntityFrameworkCore.Sqlite": "10.0.2",
@@ -433,6 +435,17 @@
         },
         "compile": {
           "lib/netstandard2.1/dotenv.net.dll": {}
+        }
+      },
+      "HtmlAgilityPack/1.12.4": {
+        "runtime": {
+          "lib/net7.0/HtmlAgilityPack.dll": {
+            "assemblyVersion": "1.12.4.0",
+            "fileVersion": "1.12.4.0"
+          }
+        },
+        "compile": {
+          "lib/net7.0/HtmlAgilityPack.dll": {}
         }
       },
       "HtmlSanitizer/9.0.892": {
@@ -3525,6 +3538,13 @@
       "sha512": "sha512-SM8Qp6L/E3tsLKDFkV23M8WHyp5l1YqsXkylQDjQjV02Z2tUL3J6j1gV0gMs4L6YtoSB7jZPw2dnDdnpEXnpNQ==",
       "path": "dotenv.net/4.0.0",
       "hashPath": "dotenv.net.4.0.0.nupkg.sha512"
+    },
+    "HtmlAgilityPack/1.12.4": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-ljqvBabvFwKoLniuoQKO8b5bJfJweKLs4fUNS/V5dsvpo0A8MlJqxxn9XVmP2DaskbUXty6IYaWAi1SArGIMeQ==",
+      "path": "htmlagilitypack/1.12.4",
+      "hashPath": "htmlagilitypack.1.12.4.nupkg.sha512"
     },
     "HtmlSanitizer/9.0.892": {
       "type": "package",

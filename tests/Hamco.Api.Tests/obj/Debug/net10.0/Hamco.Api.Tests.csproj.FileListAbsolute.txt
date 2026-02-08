@@ -477,3 +477,4 @@
 /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/bin/Debug/net10.0/HtmlSanitizer.dll
 /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/bin/Debug/net10.0/Markdig.dll
 /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/bin/Debug/net10.0/Markdown.ColorCode.dll
+/Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/bin/Debug/net10.0/HtmlAgilityPack.dll

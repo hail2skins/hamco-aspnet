@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "Lx6y3yJqL5k=",
+  "dgSpecHash": "Lsf+5uHn4iU=",
   "success": true,
   "projectFilePath": "/Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Hamco.Api.Tests.csproj",
   "expectedPackageFiles": [
@@ -11,6 +11,7 @@
     "/Users/art/.nuget/packages/colorcode.html/2.0.15/colorcode.html.2.0.15.nupkg.sha512",
     "/Users/art/.nuget/packages/coverlet.collector/6.0.4/coverlet.collector.6.0.4.nupkg.sha512",
     "/Users/art/.nuget/packages/dotenv.net/4.0.0/dotenv.net.4.0.0.nupkg.sha512",
+    "/Users/art/.nuget/packages/htmlagilitypack/1.12.4/htmlagilitypack.1.12.4.nupkg.sha512",
     "/Users/art/.nuget/packages/htmlsanitizer/9.0.892/htmlsanitizer.9.0.892.nupkg.sha512",
     "/Users/art/.nuget/packages/markdig/0.44.0/markdig.0.44.0.nupkg.sha512",
     "/Users/art/.nuget/packages/markdown.colorcode/3.0.1/markdown.colorcode.3.0.1.nupkg.sha512",
