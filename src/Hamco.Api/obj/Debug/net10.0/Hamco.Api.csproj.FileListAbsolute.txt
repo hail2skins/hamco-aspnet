@@ -165,3 +165,10 @@
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/runtimes/win-x64/native/e_sqlite3.dll
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/runtimes/win-x86/native/e_sqlite3.dll
 /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/dotenv.net.dll
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/AngleSharp.dll
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/AngleSharp.Css.dll
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/ColorCode.Core.dll
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/ColorCode.HTML.dll
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/HtmlSanitizer.dll
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/Markdig.dll
+/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/bin/Debug/net10.0/Markdown.ColorCode.dll

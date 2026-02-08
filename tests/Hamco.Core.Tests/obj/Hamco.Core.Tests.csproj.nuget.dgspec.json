@@ -755,6 +755,18 @@
               "target": "Package",
               "version": "[4.0.3, )"
             },
+            "HtmlSanitizer": {
+              "target": "Package",
+              "version": "[9.0.892, )"
+            },
+            "Markdig": {
+              "target": "Package",
+              "version": "[0.44.0, )"
+            },
+            "Markdown.ColorCode": {
+              "target": "Package",
+              "version": "[3.0.1, )"
+            },
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
               "version": "[10.0.2, )"
