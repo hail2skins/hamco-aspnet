@@ -36,7 +36,7 @@ public class AuthViewController : BaseController
     /// 
     /// Form submission is handled by JavaScript that calls /api/auth/register endpoint.
     /// </remarks>
-    [HttpGet("auth/register")]
+    [HttpGet("register")]
     public IActionResult Register()
     {
         // Pass registration status to view
