@@ -47,18 +47,54 @@ if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
 //   Compiler generates: static void Main(string[] args) { ... } automatically
 
 // ============================================================================
-// CONTENT ROOT CONFIGURATION (Critical for Railway)
+// CONTENT ROOT CONFIGURATION (Critical for Railway AND Tests)
 // ============================================================================
-// When running from published output (dotnet publish), the content root should be
-// the directory containing the executable (AppContext.BaseDirectory).
-// Views and wwwroot are now at the root of the publish output, not nested.
+// Different environments have different directory structures:
 //
-// AppContext.BaseDirectory = /app/ (Railway) or /path/to/out/ (local publish)
-// Views location: /app/Views/ (not /app/src/Hamco.Api/Views/)
-// wwwroot location: /app/wwwroot/ (not /app/src/Hamco.Api/wwwroot/)
+// Railway/Published:
+//   - AppContext.BaseDirectory = /app/
+//   - Views: /app/Views/
+//   - wwwroot: /app/wwwroot/
+//   - Entry assembly: "App"
+//
+// Tests (WebApplicationFactory):
+//   - AppContext.BaseDirectory = /path/to/tests/Hamco.Api.Tests/bin/Debug/net10.0/
+//   - Views: /path/to/src/Hamco.Api/Views/ (source location)
+//   - wwwroot: /path/to/src/Hamco.Api/wwwroot/ (source location)
+//   - Entry assembly: "testhost"
+//   - Environment: "Testing"
+//
+// Solution: Detect published vs source environment and set paths accordingly
 
-var contentRoot = AppContext.BaseDirectory;
-var webRoot = Path.Combine(contentRoot, "wwwroot");
+string contentRoot;
+string webRoot;
+
+// Check if running from published output by looking for Views at publish location
+var baseDir = AppContext.BaseDirectory;
+var publishedViewsPath = Path.Combine(baseDir, "Views", "Home", "Index.cshtml");
+var isPublished = File.Exists(publishedViewsPath);
+
+if (isPublished)
+{
+    // PUBLISHED (Railway, local publish): Views are at root of output
+    contentRoot = baseDir;
+    webRoot = Path.Combine(contentRoot, "wwwroot");
+}
+else
+{
+    // DEVELOPMENT/TESTING: Views are in source tree
+    // Navigate from bin/Debug/net10.0 up to repo root, then to src/Hamco.Api
+    // BaseDirectory structure: /path/to/tests/Hamco.Api.Tests/bin/Debug/net10.0/
+    // We need: /path/to/src/Hamco.Api/
+    
+    // Go up from bin/Debug/net10.0 to test project root (3 levels)
+    var testProjectRoot = Path.Combine(baseDir, "..", "..", "..");
+    // Go up to repo root (2 more levels from tests/Hamco.Api.Tests)
+    var repoRoot = Path.Combine(testProjectRoot, "..", "..");
+    // Navigate to src/Hamco.Api
+    contentRoot = Path.GetFullPath(Path.Combine(repoRoot, "src", "Hamco.Api"));
+    webRoot = Path.Combine(contentRoot, "wwwroot");
+}
 
 // Determine if we're running from the root App.csproj (Railway deployment)
 // Entry assembly name will be "App" when running from published output
@@ -83,9 +119,13 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 // Log critical paths and configuration to help debug Railway deployment
 Console.WriteLine("=== HAMCO STARTUP DIAGNOSTICS ===");
 Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
-Console.WriteLine($"Content Root: {builder.Environment.ContentRootPath}");
-Console.WriteLine($"Web Root: {builder.Environment.WebRootPath}");
+Console.WriteLine($"AppContext.BaseDirectory: {AppContext.BaseDirectory}");
+Console.WriteLine($"Content Root (configured): {contentRoot}");
+Console.WriteLine($"Content Root (builder): {builder.Environment.ContentRootPath}");
+Console.WriteLine($"Web Root (configured): {webRoot}");
+Console.WriteLine($"Web Root (builder): {builder.Environment.WebRootPath}");
 Console.WriteLine($"Application Name: {builder.Environment.ApplicationName}");
+Console.WriteLine($"isPublished: {isPublished}");
 
 // Check if Views directory exists
 var viewsPath = Path.Combine(builder.Environment.ContentRootPath, "Views");
@@ -139,6 +179,19 @@ if (isRunningFromRootApp)
     mvcBuilder.AddApplicationPart(typeof(Program).Assembly);
 }
 
+// Enable Razor runtime compilation for published apps (views are not pre-compiled)
+// This allows .cshtml files to be updated without recompilation
+// In development, this is enabled by default via launchSettings.json
+if (builder.Environment.IsProduction() || isPublished)
+{
+    mvcBuilder.AddRazorRuntimeCompilation(options =>
+    {
+        // Ensure the file provider uses the correct content root
+        options.FileProviders.Clear();
+        options.FileProviders.Add(new Microsoft.Extensions.FileProviders.PhysicalFileProvider(contentRoot));
+    });
+}
+
 // Add API Explorer for OpenAPI/Swagger
 // AddEndpointsApiExplorer() enables automatic API documentation:
 //   - Discovers API endpoints (controllers, actions, parameters)
@@ -179,7 +232,17 @@ builder.Services.AddOpenApi();
 //   ✓ No complex service descriptor removal gymnastics
 //   ✓ Clean separation of concerns
 
-if (builder.Environment.IsEnvironment("Testing"))
+// Detect if running in test environment by checking both environment variable AND entry assembly
+// Tests set ASPNETCORE_ENVIRONMENT=Testing AND have entry assembly = "testhost"
+var isTesting = builder.Environment.IsEnvironment("Testing") || entryAssembly?.GetName().Name == "testhost";
+
+Console.WriteLine($"=== TESTING DETECTION ===");
+Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
+Console.WriteLine($"Entry assembly: {entryAssembly?.GetName().Name}");
+Console.WriteLine($"Is Testing: {isTesting}");
+Console.WriteLine($"========================");
+
+if (isTesting)
 {
     // TESTING ENVIRONMENT: Use SQLite in-memory database
     //
@@ -506,7 +569,9 @@ app.MapControllers();
 // For Railway/single-instance deployments, this is acceptable
 // For Kubernetes/multi-instance, run migrations as a Job, not in the app
 
-if (!app.Environment.IsEnvironment("Testing"))
+// Skip migrations for testing environment (uses EnsureCreated instead)
+// Use same detection logic as database provider selection above
+if (!isTesting)
 {
     using (var scope = app.Services.CreateScope())
     {
