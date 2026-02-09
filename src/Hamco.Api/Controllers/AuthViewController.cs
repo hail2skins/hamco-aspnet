@@ -52,7 +52,7 @@ public class AuthViewController : BaseController
     /// The view provides a login form that submits to /api/auth/login via JavaScript.
     /// Includes a placeholder "Forgot password?" link for future implementation.
     /// </remarks>
-    [HttpGet("auth/login")]
+    [HttpGet("login")]
     public IActionResult Login()
     {
         return View();
