@@ -10,11 +10,8 @@ namespace Hamco.Api.Controllers;
 /// <remarks>
 /// This controller returns Razor views for authentication flows.
 /// The actual authentication logic happens in the API AuthController.
-/// 
-/// Routes:
-/// - GET /auth/register - Registration page
-/// - GET /auth/login - Login page (optional, could redirect to API endpoint)
 /// </remarks>
+[Route("auth")]
 public class AuthViewController : BaseController
 {
     private readonly IConfiguration _configuration;
@@ -54,6 +51,7 @@ public class AuthViewController : BaseController
     /// The view provides a login form that submits to /api/auth/login via JavaScript.
     /// Includes a placeholder "Forgot password?" link for future implementation.
     /// </remarks>
+    [HttpGet("auth/login")]
     public IActionResult Login()
     {
         return View();
