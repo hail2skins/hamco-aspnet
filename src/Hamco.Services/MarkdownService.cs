@@ -133,4 +133,27 @@ public class MarkdownService : IMarkdownService
 
         return _sanitizer.Sanitize(html);
     }
+
+    /// <inheritdoc />
+    public string ToPlainText(string markdown)
+    {
+        if (string.IsNullOrEmpty(markdown))
+        {
+            return string.Empty;
+        }
+
+        // First render markdown to HTML
+        var html = Markdig.Markdown.ToHtml(markdown, _pipeline);
+
+        // Strip HTML tags to get plain text
+        var plainText = System.Text.RegularExpressions.Regex.Replace(html, "<.*?>", string.Empty);
+
+        // Decode HTML entities (&amp; -> &, &lt; -> <, etc.)
+        plainText = System.Net.WebUtility.HtmlDecode(plainText);
+
+        // Normalize whitespace (collapse multiple spaces/newlines)
+        plainText = System.Text.RegularExpressions.Regex.Replace(plainText, @"\s+", " ").Trim();
+
+        return plainText;
+    }
 }

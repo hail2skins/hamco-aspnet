@@ -1,6 +1,7 @@
 @model IEnumerable<Hamco.Core.Models.Note>
 @{
     Layout = "_Layout";
+    var excerpts = ViewBag.PlainTextExcerpts as Dictionary<int, string> ?? new Dictionary<int, string>();
 }
 
 <div class="row gx-4 gx-lg-5 justify-content-center">
@@ -11,10 +12,11 @@
                 <table class="table table-hover table-striped align-middle">
                     <thead class="table-dark">
                         <tr>
-                            <th style="width: 40%;">Title</th>
-                            <th style="width: 20%;">Created</th>
-                            <th style="width: 20%;">Updated</th>
-                            <th style="width: 20%;">Actions</th>
+                            <th style="width: 25%;">Title</th>
+                            <th style="width: 35%;">Summary</th>
+                            <th style="width: 12%;">Created</th>
+                            <th style="width: 12%;">Updated</th>
+                            <th style="width: 16%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -25,6 +27,12 @@
                                     <a asp-controller="NotesView" asp-action="Detail" asp-route-id="@note.Id" class="text-decoration-none fw-bold">
                                         @note.Title
                                     </a>
+                                </td>
+                                <td class="text-muted">
+                                    @if (excerpts.ContainsKey(note.Id))
+                                    {
+                                        @excerpts[note.Id]
+                                    }
                                 </td>
                                 <td>@note.CreatedAt.ToString("MMM dd, yyyy")</td>
                                 <td>

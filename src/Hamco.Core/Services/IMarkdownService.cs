@@ -56,4 +56,21 @@ public interface IMarkdownService
     /// </code>
     /// </example>
     string SanitizeHtml(string html);
+
+    /// <summary>
+    /// Converts Markdown text to plain text by stripping all Markdown formatting.
+    /// </summary>
+    /// <param name="markdown">The Markdown text to convert.</param>
+    /// <returns>Plain text string with all Markdown syntax removed.</returns>
+    /// <remarks>
+    /// Useful for generating excerpts or summaries where formatting is not desired.
+    /// Removes headers, bold/italic, links, code blocks, etc.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// var plain = markdownService.ToPlainText("# Hello World\n\nThis is **bold** text.");
+    /// // Returns: "Hello World This is bold text."
+    /// </code>
+    /// </example>
+    string ToPlainText(string markdown);
 }

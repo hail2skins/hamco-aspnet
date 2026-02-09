@@ -1,4 +1,5 @@
 using Hamco.Services;
+using Hamco.Core.Services;
 using Hamco.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,14 +12,17 @@ namespace Hamco.Api.Controllers;
 public class HomeController : BaseController
 {
     private readonly HamcoDbContext _context;
+    private readonly IMarkdownService _markdownService;
 
     public HomeController(
         ISloganRandomizer sloganRandomizer,
         IImageRandomizer imageRandomizer,
-        HamcoDbContext context)
+        HamcoDbContext context,
+        IMarkdownService markdownService)
         : base(sloganRandomizer, imageRandomizer)
     {
         _context = context;
+        _markdownService = markdownService;
     }
 
     /// <summary>
@@ -34,6 +38,16 @@ public class HomeController : BaseController
             .OrderByDescending(n => n.CreatedAt)
             .Take(5)
             .ToListAsync();
+
+        // Prepare plain text excerpts for display (~500 chars for homepage)
+        ViewBag.PlainTextExcerpts = recentNotes.ToDictionary(
+            n => n.Id,
+            n =>
+            {
+                var plain = _markdownService.ToPlainText(n.Content);
+                return plain.Length > 500 ? plain.Substring(0, 500) + "..." : plain;
+            }
+        );
 
         return View(recentNotes);
     }

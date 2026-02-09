@@ -1,6 +1,7 @@
 @model IEnumerable<Hamco.Core.Models.Note>
 @{
     Layout = "_Layout";
+    var excerpts = ViewBag.PlainTextExcerpts as Dictionary<int, string> ?? new Dictionary<int, string>();
 }
 
 <div class="row gx-4 gx-lg-5 justify-content-center">
@@ -29,32 +30,30 @@
                     <a asp-controller="NotesView" asp-action="Index" class="btn btn-sm btn-outline-primary">View All</a>
                 </div>
 
-                <div class="list-group">
-                    @foreach (var note in Model)
-                    {
-                        <div class="list-group-item list-group-item-action">
-                            <div class="d-flex w-100 justify-content-between align-items-start">
+                @foreach (var note in Model)
+                {
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
                                 <div class="flex-grow-1">
                                     <a asp-controller="NotesView" asp-action="Detail" asp-route-id="@note.Id" class="text-decoration-none">
-                                        <h5 class="mb-1">@note.Title</h5>
+                                        <h5 class="card-title fw-bold">@note.Title</h5>
                                     </a>
-                                    <p class="mb-1 text-muted">
-                                        @if (note.Content.Length > 150)
+                                    <p class="card-text">
+                                        @if (excerpts.ContainsKey(note.Id))
                                         {
-                                            @note.Content.Substring(0, 150)@:...
-                                        }
-                                        else
-                                        {
-                                            @note.Content
+                                            @excerpts[note.Id]
                                         }
                                     </p>
-                                    <small class="text-muted">
-                                        Posted @note.CreatedAt.ToString("MMM dd, yyyy")
-                                        @if (note.UpdatedAt != note.CreatedAt)
-                                        {
-                                            <span>• Updated @note.UpdatedAt.ToString("MMM dd, yyyy")</span>
-                                        }
-                                    </small>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            Posted @note.CreatedAt.ToString("MMM dd, yyyy")
+                                            @if (note.UpdatedAt != note.CreatedAt)
+                                            {
+                                                <span>• Updated @note.UpdatedAt.ToString("MMM dd, yyyy")</span>
+                                            }
+                                        </small>
+                                    </p>
                                 </div>
                                 @if (User.IsInRole("Admin"))
                                 {
@@ -65,8 +64,8 @@
                                 }
                             </div>
                         </div>
-                    }
-                </div>
+                    </div>
+                }
             </div>
         }
         else

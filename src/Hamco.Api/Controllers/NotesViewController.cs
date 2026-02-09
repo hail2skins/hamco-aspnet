@@ -39,6 +39,16 @@ public class NotesViewController : BaseController
             .OrderByDescending(n => n.CreatedAt)
             .ToListAsync();
 
+        // Prepare plain text excerpts for display
+        ViewBag.PlainTextExcerpts = notes.ToDictionary(
+            n => n.Id,
+            n =>
+            {
+                var plain = _markdownService.ToPlainText(n.Content);
+                return plain.Length > 100 ? plain.Substring(0, 100) + "..." : plain;
+            }
+        );
+
         return View(notes);
     }
 
