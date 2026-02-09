@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Hamco.Core.Models;
-using Hamco.Core.Services;
 using Hamco.Data;
+using Hamco.Services;
 
 namespace Hamco.Api.Controllers.Admin;
 
