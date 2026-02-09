@@ -462,6 +462,106 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
+    /// Sets an HTTP-only cookie with the JWT token for persistent authentication.
+    /// </summary>
+    /// <param name="request">Request containing the JWT token to store in cookie.</param>
+    /// <returns>200 OK if cookie was set successfully.</returns>
+    /// <remarks>
+    /// HTTP Method: POST /api/auth/cookie
+    /// 
+    /// This endpoint enables cookie-based authentication flow:
+    /// 1. User logs in via /api/auth/login → receives JWT token
+    /// 2. Login page calls this endpoint with JWT token
+    /// 3. Server sets HTTP-only cookie with JWT
+    /// 4. Subsequent page loads include cookie automatically
+    /// 5. Server validates JWT from cookie → User.Identity.IsAuthenticated = true
+    /// 6. Nav bar shows authenticated state
+    /// 
+    /// Why cookie-based auth?
+    ///   - Cookies sent automatically with every request (no JS needed)
+    ///   - Server-side rendering can check User.Identity directly
+    ///   - HTTP-only cookies prevent XSS attacks (JS can't access token)
+    ///   - Works seamlessly with ASP.NET Core authentication middleware
+    /// 
+    /// Security features:
+    ///   ✅ HTTP-only cookie (prevents XSS)
+    ///   ✅ Secure flag in production (HTTPS only)
+    ///   ✅ SameSite=Strict (prevents CSRF)
+    ///   ✅ 1-hour expiration (matches JWT token expiry)
+    /// 
+    /// Request body (JSON):
+    /// {
+    ///   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    /// }
+    /// 
+    /// Response (200 OK):
+    /// {
+    ///   "success": true
+    /// }
+    /// </remarks>
+    [HttpPost("cookie")]
+    public IActionResult SetAuthCookie([FromBody] SetCookieRequest request)
+    {
+        // Validate token is provided
+        if (string.IsNullOrEmpty(request.Token))
+        {
+            return BadRequest(new { message = "Token is required" });
+        }
+
+        // Set HTTP-only cookie with JWT token
+        // Cookie name: "AuthToken" (matches ServiceCollectionExtensions JWT configuration)
+        // HttpOnly: true (prevents JavaScript access, XSS protection)
+        // Secure: true in production (HTTPS only)
+        // SameSite: Strict (prevents CSRF attacks)
+        // Expires: 1 hour (matches JWT token expiration)
+        var cookieOptions = new CookieOptions
+        {
+            HttpOnly = true,  // Can't be accessed by JavaScript (XSS protection)
+            Secure = !_configuration.GetValue<bool>("DEVELOPMENT_MODE", false),  // HTTPS only in production
+            SameSite = SameSiteMode.Strict,  // Only sent with same-site requests (CSRF protection)
+            Expires = DateTimeOffset.UtcNow.AddHours(1),  // Match JWT expiration
+            Path = "/"  // Available to entire application
+        };
+
+        // Set the cookie
+        // Response.Cookies.Append() adds Set-Cookie header to HTTP response
+        // Browser stores cookie and includes it in subsequent requests
+        // Cookie name MUST match OnMessageReceived in ServiceCollectionExtensions (line ~117)
+        Response.Cookies.Append("AuthToken", request.Token, cookieOptions);
+
+        return Ok(new { success = true });
+    }
+
+    /// <summary>
+    /// Clears the authentication cookie (logout).
+    /// </summary>
+    /// <returns>Redirect to home page after logout.</returns>
+    /// <remarks>
+    /// HTTP Method: GET /api/auth/logout
+    /// 
+    /// Logout process:
+    /// 1. Delete AuthToken cookie
+    /// 2. Redirect to home page
+    /// 3. User.Identity.IsAuthenticated = false on next page load
+    /// 4. Nav bar shows "Register | Login"
+    /// 
+    /// Note: This doesn't invalidate the JWT token itself (stateless tokens can't be revoked)
+    /// Token remains valid until expiration, but browser won't send it anymore
+    /// For true token revocation, implement a token blacklist or use refresh tokens
+    /// </remarks>
+    [HttpGet("logout")]
+    public IActionResult Logout()
+    {
+        // Delete authentication cookie by setting expired cookie
+        // Browser removes cookie when it sees Expires in the past
+        // Cookie name MUST match OnMessageReceived in ServiceCollectionExtensions
+        Response.Cookies.Delete("AuthToken");
+
+        // Redirect to home page
+        return Redirect("/");
+    }
+
+    /// <summary>
     /// Stub endpoint for forgot password (future Mailjet integration).
     /// </summary>
     /// <param name="request">Email address to send reset link to.</param>
