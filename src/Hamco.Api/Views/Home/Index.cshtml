@@ -1,3 +1,4 @@
+@model IEnumerable<Hamco.Core.Models.Note>
 @{
     Layout = "_Layout";
 }
@@ -19,12 +20,61 @@
             </p>
         </div>
         <hr class="my-4" />
-        <div class="post-preview">
-            <h3>Recent Notes</h3>
-            <p>
-                Check out our <a asp-controller="Notes" asp-action="Index">notes section</a> for technical articles, 
-                tutorials, and insights into software development.
-            </p>
-        </div>
+
+        @if (Model.Any())
+        {
+            <div class="post-preview">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">Recent Notes</h3>
+                    <a asp-controller="NotesView" asp-action="Index" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+
+                <div class="list-group">
+                    @foreach (var note in Model)
+                    {
+                        <div class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <a asp-controller="NotesView" asp-action="Detail" asp-route-id="@note.Id" class="text-decoration-none">
+                                        <h5 class="mb-1">@note.Title</h5>
+                                    </a>
+                                    <p class="mb-1 text-muted">
+                                        @if (note.Content.Length > 150)
+                                        {
+                                            @note.Content.Substring(0, 150)@:...
+                                        }
+                                        else
+                                        {
+                                            @note.Content
+                                        }
+                                    </p>
+                                    <small class="text-muted">
+                                        Posted @note.CreatedAt.ToString("MMM dd, yyyy")
+                                        @if (note.UpdatedAt != note.CreatedAt)
+                                        {
+                                            <span>• Updated @note.UpdatedAt.ToString("MMM dd, yyyy")</span>
+                                        }
+                                    </small>
+                                </div>
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <div class="btn-group btn-group-sm ms-2" role="group">
+                                        <a asp-controller="AdminNotes" asp-action="Edit" asp-route-id="@note.Id" class="btn btn-outline-warning">Update</a>
+                                        <a asp-controller="AdminNotes" asp-action="Delete" asp-route-id="@note.Id" class="btn btn-outline-danger">Delete</a>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="post-preview">
+                <h3>Recent Notes</h3>
+                <p class="text-muted">No notes yet. Check back soon for technical articles and insights.</p>
+            </div>
+        }
     </div>
 </div>
