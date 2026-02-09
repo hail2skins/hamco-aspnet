@@ -62,12 +62,12 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWRtaW5TbG9nYW5zL0luZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/Views/Auth/Login.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQXV0aC9Mb2dpbi5jc2h0bWw=
+[/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/Views/AuthView/Login.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQXV0aFZpZXcvTG9naW4uY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/Views/Auth/Register.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQXV0aC9SZWdpc3Rlci5jc2h0bWw=
+[/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/Views/AuthView/Register.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQXV0aFZpZXcvUmVnaXN0ZXIuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/Views/Home/About.cshtml]
