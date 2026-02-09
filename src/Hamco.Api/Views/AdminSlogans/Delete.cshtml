@@ -1,0 +1,56 @@
+@model Hamco.Core.Models.Slogan
+@{
+    Layout = "_Layout";
+    ViewBag.Title = "Delete Slogan";
+}
+
+<div class="row gx-4 gx-lg-5 justify-content-center">
+    <div class="col-md-10 col-lg-8 col-xl-7">
+        <h2>Delete Slogan</h2>
+
+        <div class="alert alert-warning">
+            <h4>Are you sure you want to delete this slogan?</h4>
+            <p>This action cannot be undone.</p>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">ID:</dt>
+                    <dd class="col-sm-9">@Model.Id</dd>
+
+                    <dt class="col-sm-3">Content:</dt>
+                    <dd class="col-sm-9">@Model.Text</dd>
+
+                    <dt class="col-sm-3">Active:</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.IsActive)
+                        {
+                            <span class="badge bg-success">Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Inactive</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">Created:</dt>
+                    <dd class="col-sm-9">@Model.CreatedAt.ToString("MMMM dd, yyyy")</dd>
+
+                    @if (Model.UpdatedAt.HasValue)
+                    {
+                        <dt class="col-sm-3">Updated:</dt>
+                        <dd class="col-sm-9">@Model.UpdatedAt.Value.ToString("MMMM dd, yyyy")</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <form asp-action="DeleteConfirmed" method="post">
+            <div class="d-flex justify-content-between">
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-danger">Delete Slogan</button>
+            </div>
+        </form>
+    </div>
+</div>
