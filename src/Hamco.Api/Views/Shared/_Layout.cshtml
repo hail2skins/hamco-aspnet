@@ -41,9 +41,6 @@
                     <li class="nav-item"><a class="nav-link px-lg-3 py-3 py-lg-4" asp-controller="Home" asp-action="About">About</a></li>
                     @if (User.Identity?.IsAuthenticated == true)
                     {
-                        @* Show welcome message with username *@
-                        <li class="nav-item"><span class="nav-link px-lg-3 py-3 py-lg-4">Welcome, @User.Identity.Name</span></li>
-                        
                         @* Show Slogans link only for admin users *@
                         @if (User.IsInRole("Admin"))
                         {
@@ -86,7 +83,7 @@
     <!-- Main Content-->
     <div class="container px-4 px-lg-5">
         <div class="row gx-4 gx-lg-5 justify-content-center">
-            <div class="col-md-10 col-lg-8 col-xl-7">
+            <div class="col-md-12 col-lg-11 col-xl-10">
                 @RenderBody()
             </div>
         </div>
