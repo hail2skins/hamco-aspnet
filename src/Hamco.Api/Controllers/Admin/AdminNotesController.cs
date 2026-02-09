@@ -30,11 +30,9 @@ namespace Hamco.Api.Controllers.Admin;
 /// </remarks>
 [Authorize(Roles = "Admin")]
 [Route("admin/notes")]
-public class AdminNotesController : Controller
+public class AdminNotesController : BaseController
 {
     private readonly HamcoDbContext _context;
-    private readonly ISloganRandomizer _sloganRandomizer;
-    private readonly IImageRandomizer _imageRandomizer;
 
     /// <summary>
     /// Initializes a new instance of the AdminNotesController.
@@ -46,24 +44,9 @@ public class AdminNotesController : Controller
         HamcoDbContext context,
         ISloganRandomizer sloganRandomizer,
         IImageRandomizer imageRandomizer)
+        : base(sloganRandomizer, imageRandomizer)
     {
         _context = context;
-        _sloganRandomizer = sloganRandomizer;
-        _imageRandomizer = imageRandomizer;
-    }
-
-    /// <summary>
-    /// Sets ViewBag properties for layout (slogan and random image).
-    /// Called at the start of each action.
-    /// </summary>
-    private async Task SetViewBagPropertiesAsync()
-    {
-        ViewBag.Slogan = await _sloganRandomizer.GetRandomSloganAsync();
-        ViewBag.RandomImage = _imageRandomizer.GetRandomImage();
-        if (ViewBag.Heading == null)
-        {
-            ViewBag.Heading = "Hamco Internet Solutions";
-        }
     }
 
     /// <summary>
@@ -73,7 +56,6 @@ public class AdminNotesController : Controller
     [HttpGet("", Name = "AdminNotesList")]
     public async Task<IActionResult> Index()
     {
-        await SetViewBagPropertiesAsync();
         ViewBag.Heading = "Admin Notes";
         
         var notes = await _context.Notes
@@ -90,7 +72,6 @@ public class AdminNotesController : Controller
     [HttpGet("create")]
     public async Task<IActionResult> Create()
     {
-        await SetViewBagPropertiesAsync();
         ViewBag.Heading = "Create New Note";
         return View();
     }
@@ -105,7 +86,6 @@ public class AdminNotesController : Controller
     {
         if (!ModelState.IsValid)
         {
-            await SetViewBagPropertiesAsync();
             ViewBag.Heading = "Create New Note";
             return View(model);
         }
@@ -144,7 +124,6 @@ public class AdminNotesController : Controller
             return NotFound();
         }
 
-        await SetViewBagPropertiesAsync();
         ViewBag.Heading = "Edit Note";
 
         var model = new EditNoteViewModel
@@ -174,7 +153,6 @@ public class AdminNotesController : Controller
 
         if (!ModelState.IsValid)
         {
-            await SetViewBagPropertiesAsync();
             ViewBag.Heading = "Edit Note";
             return View(model);
         }
@@ -211,7 +189,6 @@ public class AdminNotesController : Controller
             return NotFound();
         }
 
-        await SetViewBagPropertiesAsync();
         ViewBag.Heading = "Delete Note";
         return View(note);
     }

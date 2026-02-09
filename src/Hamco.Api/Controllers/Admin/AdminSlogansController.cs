@@ -30,11 +30,9 @@ namespace Hamco.Api.Controllers.Admin;
 /// </remarks>
 [Authorize(Roles = "Admin")]
 [Route("admin/slogans")]
-public class AdminSlogansController : Controller
+public class AdminSlogansController : BaseController
 {
     private readonly HamcoDbContext _context;
-    private readonly ISloganRandomizer _sloganRandomizer;
-    private readonly IImageRandomizer _imageRandomizer;
 
     /// <summary>
     /// Initializes a new instance of the AdminSlogansController.
@@ -46,24 +44,9 @@ public class AdminSlogansController : Controller
         HamcoDbContext context,
         ISloganRandomizer sloganRandomizer,
         IImageRandomizer imageRandomizer)
+        : base(sloganRandomizer, imageRandomizer)
     {
         _context = context;
-        _sloganRandomizer = sloganRandomizer;
-        _imageRandomizer = imageRandomizer;
-    }
-
-    /// <summary>
-    /// Sets ViewBag properties for layout (slogan and random image).
-    /// Called at the start of each action.
-    /// </summary>
-    private async Task SetViewBagPropertiesAsync()
-    {
-        ViewBag.Slogan = await _sloganRandomizer.GetRandomSloganAsync();
-        ViewBag.RandomImage = _imageRandomizer.GetRandomImage();
-        if (ViewBag.Heading == null)
-        {
-            ViewBag.Heading = "Hamco Internet Solutions";
-        }
     }
 
     /// <summary>
@@ -73,7 +56,6 @@ public class AdminSlogansController : Controller
     [HttpGet("", Name = "AdminSlogansList")]
     public async Task<IActionResult> Index()
     {
-        await SetViewBagPropertiesAsync();
         ViewBag.Heading = "Admin Slogans";
         
         var slogans = await _context.Slogans
@@ -90,7 +72,6 @@ public class AdminSlogansController : Controller
     [HttpGet("create")]
     public async Task<IActionResult> Create()
     {
-        await SetViewBagPropertiesAsync();
         ViewBag.Heading = "Create New Slogan";
         return View();
     }
@@ -105,7 +86,6 @@ public class AdminSlogansController : Controller
     {
         if (!ModelState.IsValid)
         {
-            await SetViewBagPropertiesAsync();
             ViewBag.Heading = "Create New Slogan";
             return View(model);
         }
@@ -140,7 +120,6 @@ public class AdminSlogansController : Controller
             return NotFound();
         }
 
-        await SetViewBagPropertiesAsync();
         ViewBag.Heading = "Edit Slogan";
 
         var model = new EditSloganViewModel
@@ -169,7 +148,6 @@ public class AdminSlogansController : Controller
 
         if (!ModelState.IsValid)
         {
-            await SetViewBagPropertiesAsync();
             ViewBag.Heading = "Edit Slogan";
             return View(model);
         }
@@ -203,7 +181,6 @@ public class AdminSlogansController : Controller
             return NotFound();
         }
 
-        await SetViewBagPropertiesAsync();
         ViewBag.Heading = "Delete Slogan";
         return View(slogan);
     }

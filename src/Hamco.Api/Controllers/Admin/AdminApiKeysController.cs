@@ -15,33 +15,20 @@ namespace Hamco.Api.Controllers.Admin;
 /// </summary>
 [Authorize(Roles = "Admin")]
 [Route("admin/apikeys")]
-public class AdminApiKeysController : Controller
+public class AdminApiKeysController : BaseController
 {
     private readonly IApiKeyService _apiKeyService;
     private readonly HamcoDbContext _context;
-    private readonly ISloganRandomizer _sloganRandomizer;
-    private readonly IImageRandomizer _imageRandomizer;
 
     public AdminApiKeysController(
         IApiKeyService apiKeyService,
         HamcoDbContext context,
         ISloganRandomizer sloganRandomizer,
         IImageRandomizer imageRandomizer)
+        : base(sloganRandomizer, imageRandomizer)
     {
         _apiKeyService = apiKeyService;
         _context = context;
-        _sloganRandomizer = sloganRandomizer;
-        _imageRandomizer = imageRandomizer;
-    }
-
-    private async Task SetViewBagPropertiesAsync()
-    {
-        ViewBag.Slogan = await _sloganRandomizer.GetRandomSloganAsync();
-        ViewBag.RandomImage = _imageRandomizer.GetRandomImage();
-        if (ViewBag.Heading == null)
-        {
-            ViewBag.Heading = "Hamco Internet Solutions";
-        }
     }
 
     /// <summary>
@@ -50,7 +37,6 @@ public class AdminApiKeysController : Controller
     [HttpGet("", Name = "AdminApiKeysList")]
     public async Task<IActionResult> Index()
     {
-        await SetViewBagPropertiesAsync();
         ViewBag.Heading = "API Key Management";
 
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -69,7 +55,6 @@ public class AdminApiKeysController : Controller
     [HttpGet("create")]
     public async Task<IActionResult> Create()
     {
-        await SetViewBagPropertiesAsync();
         ViewBag.Heading = "Create New API Key";
         return View();
     }
@@ -82,7 +67,6 @@ public class AdminApiKeysController : Controller
     {
         if (!ModelState.IsValid)
         {
-            await SetViewBagPropertiesAsync();
             ViewBag.Heading = "Create New API Key";
             return View(model);
         }
@@ -113,7 +97,6 @@ public class AdminApiKeysController : Controller
     [HttpGet("show/{id}")]
     public async Task<IActionResult> ShowKey(string id)
     {
-        await SetViewBagPropertiesAsync();
         ViewBag.Heading = "Save Your API Key";
 
         // Only show if we have the key in TempData

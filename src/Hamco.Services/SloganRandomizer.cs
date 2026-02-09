@@ -38,18 +38,11 @@ public class SloganRandomizer : ISloganRandomizer
     /// <inheritdoc />
     public async Task<string> GetRandomSloganAsync()
     {
-        // Try to get cached slogans
-        if (!_cache.TryGetValue(CacheKey, out List<string>? slogans))
-        {
-            // Cache miss - fetch from database
-            slogans = await _context.Slogans
-                .Where(s => s.IsActive)
-                .Select(s => s.Text)
-                .ToListAsync();
-
-            // Cache the results
-            _cache.Set(CacheKey, slogans, CacheDuration);
-        }
+        // Fetch fresh from database every time (no caching for true randomness)
+        var slogans = await _context.Slogans
+            .Where(s => s.IsActive)
+            .Select(s => s.Text)
+            .ToListAsync();
 
         // If no slogans found, return default
         if (slogans == null || slogans.Count == 0)
