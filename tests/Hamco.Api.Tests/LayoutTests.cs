@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using Xunit;
 using Microsoft.Extensions.DependencyInjection;
 using Hamco.Data;
@@ -231,5 +232,23 @@ public class LayoutTests : IClassFixture<TestWebApplicationFactory>
         Assert.Contains("Test Note", content);
         Assert.Contains("Art Mills", content); // Author name
         Assert.Contains("This is test content", content);
+    }
+
+    [Fact]
+    public async Task Navigation_WhenNotLoggedIn_ShowsRegisterAndLogin()
+    {
+        // Act
+        var response = await _client.GetAsync("/");
+
+        // Assert
+        response.EnsureSuccessStatusCode();
+        var content = await response.Content.ReadAsStringAsync();
+        
+        // Should show Register and Login links
+        Assert.Contains("Register", content);
+        Assert.Contains("Login", content);
+        
+        // Should NOT show welcome message when not authenticated
+        // (Full UI auth testing requires cookie-based auth setup)
     }
 }

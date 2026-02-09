@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Hamco.Core.Models;
 using Hamco.Core.Services;
 using Hamco.Data;
+using Microsoft.Extensions.Configuration;
 
 namespace Hamco.Api.Controllers;
 
@@ -70,6 +71,7 @@ public class AuthController : ControllerBase
     private readonly HamcoDbContext _context;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtService _jwtService;
+    private readonly IConfiguration _configuration;
 
     /// <summary>
     /// Initializes a new instance of the AuthController.
@@ -77,16 +79,19 @@ public class AuthController : ControllerBase
     /// <param name="context">Database context for user data access.</param>
     /// <param name="passwordHasher">Service for hashing and verifying passwords.</param>
     /// <param name="jwtService">Service for generating and validating JWT tokens.</param>
+    /// <param name="configuration">Configuration for environment variables (registration lock, etc.).</param>
     /// <remarks>
     /// Multiple dependency injection:
-    ///   This controller requires 3 services:
+    ///   This controller requires 4 services:
     ///   1. HamcoDbContext: Database access (user lookup, creation)
     ///   2. IPasswordHasher: Password security (hash, verify)
     ///   3. IJwtService: Token generation (JWT creation)
+    ///   4. IConfiguration: Environment variables and settings
     /// 
     /// All dependencies registered in Program.cs:
     ///   - AddDbContext&lt;HamcoDbContext&gt;: Database context
     ///   - AddAuthServices(): Password hasher + JWT service
+    ///   - IConfiguration: Automatically registered by ASP.NET Core
     /// 
     /// DI container creates instances and injects them automatically.
     /// 
@@ -98,11 +103,13 @@ public class AuthController : ControllerBase
     public AuthController(
         HamcoDbContext context,
         IPasswordHasher passwordHasher,
-        IJwtService jwtService)
+        IJwtService jwtService,
+        IConfiguration configuration)
     {
         _context = context;
         _passwordHasher = passwordHasher;
         _jwtService = jwtService;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -181,6 +188,16 @@ public class AuthController : ControllerBase
     [HttpPost("register")]  // Route: POST /api/auth/register
     public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
     {
+        // Step 0: Check if registration is allowed via environment variable
+        // ALLOW_REGISTRATION defaults to "false" (blocked) for security
+        // Set to "true" in environment to enable public registration
+        var allowRegistration = _configuration.GetValue<bool>("ALLOW_REGISTRATION", false);
+        
+        if (!allowRegistration)
+        {
+            return StatusCode(403, new { message = "Registration is currently disabled" });
+        }
+
         // Step 1: Check if email already exists
         // AnyAsync(): Returns true if any user matches condition
         // Lambda: u => u.Email == request.Email

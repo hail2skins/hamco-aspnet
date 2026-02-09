@@ -1,0 +1,134 @@
+@{
+    Layout = "_Layout";
+    ViewBag.Title = "Register";
+    ViewBag.Heading = "Register";
+    ViewBag.Slogan = "Create your account";
+}
+
+<div class="row gx-4 gx-lg-5 justify-content-center">
+    <div class="col-md-10 col-lg-8 col-xl-7">
+        @* Check if registration is disabled via environment variable *@
+        @{
+            var allowRegistration = ViewBag.AllowRegistration ?? false;
+        }
+
+        @if (!allowRegistration)
+        {
+            <div class="alert alert-warning" role="alert">
+                <h4 class="alert-heading">Registration Disabled</h4>
+                <p>Registration is currently disabled. Please contact the administrator if you need an account.</p>
+                <hr>
+                <p class="mb-0">
+                    <a asp-controller="Home" asp-action="Index" class="alert-link">Return to Home</a>
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="card-title text-center mb-4">Create Account</h3>
+                    
+                    <form id="registerForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email address</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                            <div class="form-text">We'll never share your email with anyone else.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" minlength="6" required>
+                            <div class="form-text">Password must be at least 6 characters.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required>
+                        </div>
+
+                        <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
+                        <div id="successMessage" class="alert alert-success d-none" role="alert"></div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">Register</button>
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-3">
+                        <p>Already have an account? <a href="/api/auth/login">Login here</a></p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('registerForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            const errorDiv = document.getElementById('errorMessage');
+            const successDiv = document.getElementById('successMessage');
+            
+            // Hide previous messages
+            errorDiv.classList.add('d-none');
+            successDiv.classList.add('d-none');
+            
+            // Validate password match
+            if (password !== confirmPassword) {
+                errorDiv.textContent = 'Passwords do not match';
+                errorDiv.classList.remove('d-none');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username,
+                        email,
+                        password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Registration successful
+                    successDiv.textContent = 'Registration successful! Redirecting to home...';
+                    successDiv.classList.remove('d-none');
+                    
+                    // Store token (optional - for API calls)
+                    localStorage.setItem('authToken', data.token);
+                    
+                    // Redirect to home page after 1 second
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    // Registration failed
+                    errorDiv.textContent = data.message || 'Registration failed. Please try again.';
+                    errorDiv.classList.remove('d-none');
+                }
+            } catch (error) {
+                errorDiv.textContent = 'An error occurred. Please try again later.';
+                errorDiv.classList.remove('d-none');
+            }
+        });
+    </script>
+}

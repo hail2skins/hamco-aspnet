@@ -34,6 +34,13 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>, IDispos
 {
     private SqliteConnection? _connection;
 
+    /// <summary>
+    /// Creates a new test web application factory with default configuration.
+    /// </summary>
+    public TestWebApplicationFactory()
+    {
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Set environment to "Testing" so Program.cs registers SQLite instead of Npgsql
