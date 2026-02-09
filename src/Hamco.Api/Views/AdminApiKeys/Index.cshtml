@@ -1,0 +1,105 @@
+@model IEnumerable<Hamco.Core.Models.ApiKey>
+@{
+    Layout = "_Layout";
+    ViewBag.Title = "API Key Management";
+}
+
+<div class="row gx-4 gx-lg-5 justify-content-center">
+    <div class="col-md-10 col-lg-8 col-xl-7">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Manage API Keys</h2>
+            <a asp-action="Create" class="btn btn-primary">Create New API Key</a>
+        </div>
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        @if (!Model.Any())
+        {
+            <div class="alert alert-info">
+                <p class="mb-0">No API keys found. <a asp-action="Create">Create your first API key</a> to allow external services to access the API.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Prefix</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var key in Model)
+                        {
+                            <tr class="@(!key.IsActive ? "table-secondary" : "")">
+                                <td>@key.Name</td>
+                                <td><code>@key.KeyPrefix</code></td>
+                                <td>
+                                    @if (key.IsAdmin)
+                                    {
+                                        <span class="badge bg-danger">Admin</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info">Read-Only</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (key.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Revoked</span>
+                                    }
+                                </td>
+                                <td>@key.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
+                                <td>
+                                    @if (key.IsActive)
+                                    {
+                                        <form asp-action="Revoke" asp-route-id="@key.Id" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to revoke this API key? It will stop working immediately.');">
+                                            <button type="submit" class="btn btn-sm btn-warning">Revoke</button>
+                                        </form>
+                                    }
+                                    <form asp-action="Delete" asp-route-id="@key.Id" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to permanently delete this API key? This cannot be undone.');">
+                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-info mt-4">
+                <h5 class="alert-heading"><i class="fas fa-info-circle"></i> About API Keys</h5>
+                <ul class="mb-0">
+                    <li><strong>Admin keys</strong> can create, edit, and delete notes</li>
+                    <li><strong>Read-Only keys</strong> can only read notes</li>
+                    <li>API keys are shown <strong>only once</strong> when created - save them securely!</li>
+                    <li>Revoked keys stop working immediately but remain in the list for audit</li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>

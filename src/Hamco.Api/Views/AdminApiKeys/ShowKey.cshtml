@@ -1,0 +1,89 @@
+@{
+    Layout = "_Layout";
+    ViewBag.Title = "Save Your API Key";
+}
+
+<div class="row gx-4 gx-lg-5 justify-content-center">
+    <div class="col-md-10 col-lg-8 col-xl-7">
+        <h2 class="mb-4">🔐 Save Your API Key</h2>
+
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-circle"></i>
+            <strong>This is the only time you'll see this key!</strong>
+            Copy it now and store it securely. If you lose it, you'll need to create a new one.
+        </div>
+
+        <div class="card border-primary mb-4">
+            <div class="card-header bg-primary text-white">
+                <strong>@ViewBag.KeyName</strong>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Your API Key:</label>
+                    <div class="input-group">
+                        <input type="text" id="apiKey" class="form-control font-monospace" value="@ViewBag.ApiKey" readonly />
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyKey()">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
+
+                <div class="alert alert-light border">
+                    <small class="text-muted">
+                        <strong>Key ID:</strong> @ViewBag.KeyId<br>
+                        <strong>Created:</strong> @DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm UTC")
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-code"></i> Usage Example
+            </div>
+            <div class="card-body">
+                <p class="card-text">Use this key in the <code>X-API-Key</code> header:</p>
+                <pre class="bg-dark text-light p-3 rounded"><code>curl -X POST https://hamco.app/api/notes \
+  -H "X-API-Key: @ViewBag.ApiKey" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "My New Note",
+    "content": "Note content here..."
+  }'</code></pre>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a asp-action="Index" class="btn btn-primary">I've Saved the Key - Go to API Keys List</a>
+            <button type="button" class="btn btn-outline-secondary" onclick="copyKey()">Copy Key Again</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function copyKey() {
+            const keyInput = document.getElementById('apiKey');
+            keyInput.select();
+            keyInput.setSelectionRange(0, 99999); // For mobile devices
+            navigator.clipboard.writeText(keyInput.value).then(() => {
+                // Show temporary feedback
+                const btn = document.querySelector('button[onclick="copyKey()"]');
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-success');
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-secondary');
+                }, 2000);
+            });
+        }
+
+        // Auto-select the key on page load for easy copying
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('apiKey').select();
+        });
+    </script>
+}

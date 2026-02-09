@@ -45,8 +45,9 @@
                         @if (User.IsInRole("Admin"))
                         {
                             <li class="nav-item"><a class="nav-link px-lg-3 py-3 py-lg-4" asp-controller="AdminSlogans" asp-action="Index">Slogans</a></li>
+                            <li class="nav-item"><a class="nav-link px-lg-3 py-3 py-lg-4" asp-controller="AdminApiKeys" asp-action="Index">API Keys</a></li>
                         }
-                        
+
                         <li class="nav-item"><a class="nav-link px-lg-3 py-3 py-lg-4" href="/api/auth/logout">Logout</a></li>
                     }
                     else

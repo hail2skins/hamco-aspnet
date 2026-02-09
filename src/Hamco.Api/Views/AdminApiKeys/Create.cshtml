@@ -1,0 +1,49 @@
+@model Hamco.Api.Controllers.Admin.CreateApiKeyViewModel
+@{
+    Layout = "_Layout";
+    ViewBag.Title = "Create API Key";
+}
+
+<div class="row gx-4 gx-lg-5 justify-content-center">
+    <div class="col-md-10 col-lg-8 col-xl-7">
+        <h2 class="mb-4">Create New API Key</h2>
+
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Important:</strong> The API key will be shown <strong>only once</strong> after creation. 
+            Copy and save it securely - you won't be able to see it again!
+        </div>
+
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label">Key Name</label>
+                <input asp-for="Name" class="form-control" placeholder="e.g., Skippy Bot, Production Deploy, Personal Scripts" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <div class="form-text">A descriptive name to help you remember what this key is for.</div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <input asp-for="IsAdmin" class="form-check-input" />
+                    <label asp-for="IsAdmin" class="form-check-label">
+                        Grant Admin Access
+                    </label>
+                </div>
+                <div class="form-text">
+                    Admin keys can create, edit, and delete notes. Read-only keys can only view notes.
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Generate API Key</button>
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
