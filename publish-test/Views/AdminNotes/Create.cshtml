@@ -1,0 +1,44 @@
+@model CreateNoteViewModel
+@{
+    Layout = "_Layout";
+    ViewBag.Title = "Create Note";
+}
+
+<div class="row gx-4 gx-lg-5 justify-content-center">
+    <div class="col-md-10 col-lg-8 col-xl-7">
+        <h2>Create New Note</h2>
+
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="Title" class="form-label">Title</label>
+                <input asp-for="Title" class="form-control" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Slug" class="form-label">Slug (optional - auto-generated from title)</label>
+                <input asp-for="Slug" class="form-control" placeholder="Leave blank for auto-generation" />
+                <span asp-validation-for="Slug" class="text-danger"></span>
+                <small class="form-text text-muted">URL-friendly identifier. Leave blank to auto-generate from title.</small>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Content" class="form-label">Content (Markdown)</label>
+                <textarea asp-for="Content" class="form-control" rows="20"></textarea>
+                <span asp-validation-for="Content" class="text-danger"></span>
+                <small class="form-text text-muted">Supports Markdown formatting.</small>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

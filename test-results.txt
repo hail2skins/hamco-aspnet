@@ -1,0 +1,339 @@
+Test run for /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/bin/Debug/net10.0/Hamco.Api.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.1 (arm64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Failed Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests.GetApiKeys_WithoutToken_Returns401 [1 ms]
+  Error Message:
+   System.InvalidOperationException : An error was generated for warning 'Microsoft.EntityFrameworkCore.Migrations.PendingModelChangesWarning': The model for context 'HamcoDbContext' has pending changes. Add a new migration before updating the database. See https://aka.ms/efcore-docs-pending-changes. This exception can be suppressed or logged by passing event ID 'RelationalEventId.PendingModelChangesWarning' to the 'ConfigureWarnings' method in 'DbContext.OnConfiguring' or 'AddDbContext'.
+  Stack Trace:
+     at Microsoft.EntityFrameworkCore.Diagnostics.EventDefinition`1.Log[TLoggerCategory](IDiagnosticsLogger`1 logger, TParam arg)
+   at Microsoft.EntityFrameworkCore.Diagnostics.RelationalLoggerExtensions.PendingModelChangesWarning(IDiagnosticsLogger`1 diagnostics, Type contextType)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.ValidateMigrations(Boolean useTransaction, String targetMigration)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.Migrate(String targetMigration)
+   at Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.Migrate(DatabaseFacade databaseFacade)
+   at Program.<Main>$(String[] args) in /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/Program.cs:line 557
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Mvc.Testing.DeferredHostBuilder.DeferredHost.StartAsync(CancellationToken cancellationToken)
+   at Microsoft.Extensions.Hosting.HostingAbstractionsHostExtensions.Start(IHost host)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.DelegatedWebApplicationFactory.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.ConfigureHostBuilder(IHostBuilder hostBuilder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.StartServer()
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(Uri baseAddress, DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient(WebApplicationFactoryClientOptions options)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient()
+   at Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests..ctor(WebApplicationFactory`1 factory) in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/ApiKeysControllerTests.cs:line 88
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Constructor(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  Failed Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests.DeleteApiKey_WithoutToken_Returns401 [1 ms]
+  Error Message:
+   System.InvalidOperationException : An error was generated for warning 'Microsoft.EntityFrameworkCore.Migrations.PendingModelChangesWarning': The model for context 'HamcoDbContext' has pending changes. Add a new migration before updating the database. See https://aka.ms/efcore-docs-pending-changes. This exception can be suppressed or logged by passing event ID 'RelationalEventId.PendingModelChangesWarning' to the 'ConfigureWarnings' method in 'DbContext.OnConfiguring' or 'AddDbContext'.
+  Stack Trace:
+     at Microsoft.EntityFrameworkCore.Diagnostics.EventDefinition`1.Log[TLoggerCategory](IDiagnosticsLogger`1 logger, TParam arg)
+   at Microsoft.EntityFrameworkCore.Diagnostics.RelationalLoggerExtensions.PendingModelChangesWarning(IDiagnosticsLogger`1 diagnostics, Type contextType)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.ValidateMigrations(Boolean useTransaction, String targetMigration)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.Migrate(String targetMigration)
+   at Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.Migrate(DatabaseFacade databaseFacade)
+   at Program.<Main>$(String[] args) in /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/Program.cs:line 557
+   at InvokeStub_Program.<Main>$(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Mvc.Testing.DeferredHostBuilder.DeferredHost.StartAsync(CancellationToken cancellationToken)
+   at Microsoft.Extensions.Hosting.HostingAbstractionsHostExtensions.Start(IHost host)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.DelegatedWebApplicationFactory.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.ConfigureHostBuilder(IHostBuilder hostBuilder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.StartServer()
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(Uri baseAddress, DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient(WebApplicationFactoryClientOptions options)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient()
+   at Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests..ctor(WebApplicationFactory`1 factory) in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/ApiKeysControllerTests.cs:line 88
+   at InvokeStub_ApiKeysControllerTests..ctor(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests.PostApiKey_WithoutToken_Returns401 [1 ms]
+  Error Message:
+   System.InvalidOperationException : An error was generated for warning 'Microsoft.EntityFrameworkCore.Migrations.PendingModelChangesWarning': The model for context 'HamcoDbContext' has pending changes. Add a new migration before updating the database. See https://aka.ms/efcore-docs-pending-changes. This exception can be suppressed or logged by passing event ID 'RelationalEventId.PendingModelChangesWarning' to the 'ConfigureWarnings' method in 'DbContext.OnConfiguring' or 'AddDbContext'.
+  Stack Trace:
+     at Microsoft.EntityFrameworkCore.Diagnostics.EventDefinition`1.Log[TLoggerCategory](IDiagnosticsLogger`1 logger, TParam arg)
+   at Microsoft.EntityFrameworkCore.Diagnostics.RelationalLoggerExtensions.PendingModelChangesWarning(IDiagnosticsLogger`1 diagnostics, Type contextType)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.ValidateMigrations(Boolean useTransaction, String targetMigration)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.Migrate(String targetMigration)
+   at Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.Migrate(DatabaseFacade databaseFacade)
+   at Program.<Main>$(String[] args) in /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/Program.cs:line 557
+   at InvokeStub_Program.<Main>$(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Mvc.Testing.DeferredHostBuilder.DeferredHost.StartAsync(CancellationToken cancellationToken)
+   at Microsoft.Extensions.Hosting.HostingAbstractionsHostExtensions.Start(IHost host)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.DelegatedWebApplicationFactory.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.ConfigureHostBuilder(IHostBuilder hostBuilder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.StartServer()
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(Uri baseAddress, DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient(WebApplicationFactoryClientOptions options)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient()
+   at Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests..ctor(WebApplicationFactory`1 factory) in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/ApiKeysControllerTests.cs:line 88
+   at InvokeStub_ApiKeysControllerTests..ctor(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests.PostApiKey_WithAdminToken_ReturnsCreatedWithKey [1 ms]
+  Error Message:
+   System.InvalidOperationException : An error was generated for warning 'Microsoft.EntityFrameworkCore.Migrations.PendingModelChangesWarning': The model for context 'HamcoDbContext' has pending changes. Add a new migration before updating the database. See https://aka.ms/efcore-docs-pending-changes. This exception can be suppressed or logged by passing event ID 'RelationalEventId.PendingModelChangesWarning' to the 'ConfigureWarnings' method in 'DbContext.OnConfiguring' or 'AddDbContext'.
+  Stack Trace:
+     at Microsoft.EntityFrameworkCore.Diagnostics.EventDefinition`1.Log[TLoggerCategory](IDiagnosticsLogger`1 logger, TParam arg)
+   at Microsoft.EntityFrameworkCore.Diagnostics.RelationalLoggerExtensions.PendingModelChangesWarning(IDiagnosticsLogger`1 diagnostics, Type contextType)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.ValidateMigrations(Boolean useTransaction, String targetMigration)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.Migrate(String targetMigration)
+   at Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.Migrate(DatabaseFacade databaseFacade)
+   at Program.<Main>$(String[] args) in /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/Program.cs:line 557
+   at InvokeStub_Program.<Main>$(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Mvc.Testing.DeferredHostBuilder.DeferredHost.StartAsync(CancellationToken cancellationToken)
+   at Microsoft.Extensions.Hosting.HostingAbstractionsHostExtensions.Start(IHost host)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.DelegatedWebApplicationFactory.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.ConfigureHostBuilder(IHostBuilder hostBuilder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.StartServer()
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(Uri baseAddress, DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient(WebApplicationFactoryClientOptions options)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient()
+   at Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests..ctor(WebApplicationFactory`1 factory) in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/ApiKeysControllerTests.cs:line 88
+   at InvokeStub_ApiKeysControllerTests..ctor(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests.PostApiKey_WithEmptyName_Returns400 [1 ms]
+  Error Message:
+   System.InvalidOperationException : An error was generated for warning 'Microsoft.EntityFrameworkCore.Migrations.PendingModelChangesWarning': The model for context 'HamcoDbContext' has pending changes. Add a new migration before updating the database. See https://aka.ms/efcore-docs-pending-changes. This exception can be suppressed or logged by passing event ID 'RelationalEventId.PendingModelChangesWarning' to the 'ConfigureWarnings' method in 'DbContext.OnConfiguring' or 'AddDbContext'.
+  Stack Trace:
+     at Microsoft.EntityFrameworkCore.Diagnostics.EventDefinition`1.Log[TLoggerCategory](IDiagnosticsLogger`1 logger, TParam arg)
+   at Microsoft.EntityFrameworkCore.Diagnostics.RelationalLoggerExtensions.PendingModelChangesWarning(IDiagnosticsLogger`1 diagnostics, Type contextType)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.ValidateMigrations(Boolean useTransaction, String targetMigration)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.Migrate(String targetMigration)
+   at Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.Migrate(DatabaseFacade databaseFacade)
+   at Program.<Main>$(String[] args) in /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/Program.cs:line 557
+   at InvokeStub_Program.<Main>$(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Mvc.Testing.DeferredHostBuilder.DeferredHost.StartAsync(CancellationToken cancellationToken)
+   at Microsoft.Extensions.Hosting.HostingAbstractionsHostExtensions.Start(IHost host)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.DelegatedWebApplicationFactory.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.ConfigureHostBuilder(IHostBuilder hostBuilder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.StartServer()
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(Uri baseAddress, DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient(WebApplicationFactoryClientOptions options)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient()
+   at Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests..ctor(WebApplicationFactory`1 factory) in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/ApiKeysControllerTests.cs:line 88
+   at InvokeStub_ApiKeysControllerTests..ctor(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests.GetApiKeys_WithAdminToken_ReturnsKeys [1 ms]
+  Error Message:
+   System.InvalidOperationException : An error was generated for warning 'Microsoft.EntityFrameworkCore.Migrations.PendingModelChangesWarning': The model for context 'HamcoDbContext' has pending changes. Add a new migration before updating the database. See https://aka.ms/efcore-docs-pending-changes. This exception can be suppressed or logged by passing event ID 'RelationalEventId.PendingModelChangesWarning' to the 'ConfigureWarnings' method in 'DbContext.OnConfiguring' or 'AddDbContext'.
+  Stack Trace:
+     at Microsoft.EntityFrameworkCore.Diagnostics.EventDefinition`1.Log[TLoggerCategory](IDiagnosticsLogger`1 logger, TParam arg)
+   at Microsoft.EntityFrameworkCore.Diagnostics.RelationalLoggerExtensions.PendingModelChangesWarning(IDiagnosticsLogger`1 diagnostics, Type contextType)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.ValidateMigrations(Boolean useTransaction, String targetMigration)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.Migrate(String targetMigration)
+   at Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.Migrate(DatabaseFacade databaseFacade)
+   at Program.<Main>$(String[] args) in /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/Program.cs:line 557
+   at InvokeStub_Program.<Main>$(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Mvc.Testing.DeferredHostBuilder.DeferredHost.StartAsync(CancellationToken cancellationToken)
+   at Microsoft.Extensions.Hosting.HostingAbstractionsHostExtensions.Start(IHost host)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.DelegatedWebApplicationFactory.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.ConfigureHostBuilder(IHostBuilder hostBuilder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.StartServer()
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(Uri baseAddress, DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient(WebApplicationFactoryClientOptions options)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient()
+   at Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests..ctor(WebApplicationFactory`1 factory) in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/ApiKeysControllerTests.cs:line 88
+   at InvokeStub_ApiKeysControllerTests..ctor(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests.DeleteApiKey_WithAdminToken_Returns204 [1 ms]
+  Error Message:
+   System.InvalidOperationException : An error was generated for warning 'Microsoft.EntityFrameworkCore.Migrations.PendingModelChangesWarning': The model for context 'HamcoDbContext' has pending changes. Add a new migration before updating the database. See https://aka.ms/efcore-docs-pending-changes. This exception can be suppressed or logged by passing event ID 'RelationalEventId.PendingModelChangesWarning' to the 'ConfigureWarnings' method in 'DbContext.OnConfiguring' or 'AddDbContext'.
+  Stack Trace:
+     at Microsoft.EntityFrameworkCore.Diagnostics.EventDefinition`1.Log[TLoggerCategory](IDiagnosticsLogger`1 logger, TParam arg)
+   at Microsoft.EntityFrameworkCore.Diagnostics.RelationalLoggerExtensions.PendingModelChangesWarning(IDiagnosticsLogger`1 diagnostics, Type contextType)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.ValidateMigrations(Boolean useTransaction, String targetMigration)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.Migrate(String targetMigration)
+   at Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.Migrate(DatabaseFacade databaseFacade)
+   at Program.<Main>$(String[] args) in /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/Program.cs:line 557
+   at InvokeStub_Program.<Main>$(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Mvc.Testing.DeferredHostBuilder.DeferredHost.StartAsync(CancellationToken cancellationToken)
+   at Microsoft.Extensions.Hosting.HostingAbstractionsHostExtensions.Start(IHost host)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.DelegatedWebApplicationFactory.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.ConfigureHostBuilder(IHostBuilder hostBuilder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.StartServer()
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(Uri baseAddress, DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient(WebApplicationFactoryClientOptions options)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient()
+   at Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests..ctor(WebApplicationFactory`1 factory) in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/ApiKeysControllerTests.cs:line 88
+   at InvokeStub_ApiKeysControllerTests..ctor(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Hamco.Api.Tests.LayoutTests.SloganChanges_BetweenPageLoads [11 ms]
+  Error Message:
+   Should display at least one slogan variant
+  Stack Trace:
+     at Hamco.Api.Tests.LayoutTests.SloganChanges_BetweenPageLoads() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/LayoutTests.cs:line 175
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.LayoutTests.HomePage_ContainsSlogan [1 ms]
+  Error Message:
+   Page should contain one of the test slogans
+  Stack Trace:
+     at Hamco.Api.Tests.LayoutTests.HomePage_ContainsSlogan() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/LayoutTests.cs:line 129
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests.DeleteApiKey_WithNonExistentId_Returns404 [1 ms]
+  Error Message:
+   System.InvalidOperationException : An error was generated for warning 'Microsoft.EntityFrameworkCore.Migrations.PendingModelChangesWarning': The model for context 'HamcoDbContext' has pending changes. Add a new migration before updating the database. See https://aka.ms/efcore-docs-pending-changes. This exception can be suppressed or logged by passing event ID 'RelationalEventId.PendingModelChangesWarning' to the 'ConfigureWarnings' method in 'DbContext.OnConfiguring' or 'AddDbContext'.
+  Stack Trace:
+     at Microsoft.EntityFrameworkCore.Diagnostics.EventDefinition`1.Log[TLoggerCategory](IDiagnosticsLogger`1 logger, TParam arg)
+   at Microsoft.EntityFrameworkCore.Diagnostics.RelationalLoggerExtensions.PendingModelChangesWarning(IDiagnosticsLogger`1 diagnostics, Type contextType)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.ValidateMigrations(Boolean useTransaction, String targetMigration)
+   at Microsoft.EntityFrameworkCore.Migrations.Internal.Migrator.Migrate(String targetMigration)
+   at Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.Migrate(DatabaseFacade databaseFacade)
+   at Program.<Main>$(String[] args) in /Users/art/.openclaw/workspace/projects/hamco/src/Hamco.Api/Program.cs:line 557
+   at InvokeStub_Program.<Main>$(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Mvc.Testing.DeferredHostBuilder.DeferredHost.StartAsync(CancellationToken cancellationToken)
+   at Microsoft.Extensions.Hosting.HostingAbstractionsHostExtensions.Start(IHost host)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.DelegatedWebApplicationFactory.CreateHost(IHostBuilder builder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.ConfigureHostBuilder(IHostBuilder hostBuilder)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.StartServer()
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateDefaultClient(Uri baseAddress, DelegatingHandler[] handlers)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient(WebApplicationFactoryClientOptions options)
+   at Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory`1.CreateClient()
+   at Hamco.Api.Tests.Controllers.Admin.ApiKeysControllerTests..ctor(WebApplicationFactory`1 factory) in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/ApiKeysControllerTests.cs:line 88
+   at InvokeStub_ApiKeysControllerTests..ctor(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.GetSlogans_WithNonAdminApiKey_Returns403 [1 s]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: Forbidden
+Actual:   InternalServerError
+  Stack Trace:
+     at Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.GetSlogans_WithNonAdminApiKey_Returns403() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/SlogansControllerTests.cs:line 241
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.DeleteSlogan_WithNonAdminApiKey_Returns403 [1 s]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: Forbidden
+Actual:   InternalServerError
+  Stack Trace:
+     at Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.DeleteSlogan_WithNonAdminApiKey_Returns403() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/SlogansControllerTests.cs:line 587
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.GetSlogans_WithAdminApiKey_Returns200WithSlogans [754 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: OK
+Actual:   InternalServerError
+  Stack Trace:
+     at Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.GetSlogans_WithAdminApiKey_Returns200WithSlogans() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/SlogansControllerTests.cs:line 205
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.PutSlogan_WithInvalidId_Returns404 [731 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: NotFound
+Actual:   InternalServerError
+  Stack Trace:
+     at Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.PutSlogan_WithInvalidId_Returns404() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/SlogansControllerTests.cs:line 507
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.DeleteSlogan_WithAdminApiKey_Returns204 [685 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: NoContent
+Actual:   InternalServerError
+  Stack Trace:
+     at Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.DeleteSlogan_WithAdminApiKey_Returns204() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/SlogansControllerTests.cs:line 551
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.GetSlogans_WithAdminJwt_Returns200WithSlogans [652 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: OK
+Actual:   InternalServerError
+  Stack Trace:
+     at Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.GetSlogans_WithAdminJwt_Returns200WithSlogans() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/SlogansControllerTests.cs:line 185
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.PutSlogan_WithAdminApiKey_Returns200WithUpdatedSlogan [647 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: OK
+Actual:   InternalServerError
+  Stack Trace:
+     at Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.PutSlogan_WithAdminApiKey_Returns200WithUpdatedSlogan() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/SlogansControllerTests.cs:line 428
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.DeleteSlogan_WithInvalidId_Returns404 [650 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: NotFound
+Actual:   InternalServerError
+  Stack Trace:
+     at Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.DeleteSlogan_WithInvalidId_Returns404() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/SlogansControllerTests.cs:line 621
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.PutSlogan_WithAdminJwt_Returns200WithUpdatedSlogan [649 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: OK
+Actual:   InternalServerError
+  Stack Trace:
+     at Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.PutSlogan_WithAdminJwt_Returns200WithUpdatedSlogan() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/SlogansControllerTests.cs:line 403
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.PostSlogan_WithAdminApiKey_Returns201WithCreatedSlogan [646 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: Created
+Actual:   InternalServerError
+  Stack Trace:
+     at Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.PostSlogan_WithAdminApiKey_Returns201WithCreatedSlogan() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/SlogansControllerTests.cs:line 303
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.PostSlogan_WithAdminJwt_Returns201WithCreatedSlogan [645 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: Created
+Actual:   InternalServerError
+  Stack Trace:
+     at Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.PostSlogan_WithAdminJwt_Returns201WithCreatedSlogan() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/SlogansControllerTests.cs:line 279
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.DeleteSlogan_WithAdminJwt_Returns204 [649 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: NoContent
+Actual:   InternalServerError
+  Stack Trace:
+     at Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.DeleteSlogan_WithAdminJwt_Returns204() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/SlogansControllerTests.cs:line 529
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.PostSlogan_WithNonAdminApiKey_Returns403 [635 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: Forbidden
+Actual:   InternalServerError
+  Stack Trace:
+     at Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.PostSlogan_WithNonAdminApiKey_Returns403() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/SlogansControllerTests.cs:line 344
+--- End of stack trace from previous location ---
+  Failed Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.PutSlogan_WithNonAdminApiKey_Returns403 [640 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: Forbidden
+Actual:   InternalServerError
+  Stack Trace:
+     at Hamco.Api.Tests.Controllers.Admin.SlogansControllerTests.PutSlogan_WithNonAdminApiKey_Returns403() in /Users/art/.openclaw/workspace/projects/hamco/tests/Hamco.Api.Tests/Controllers/Admin/SlogansControllerTests.cs:line 470
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:    24, Passed:    68, Skipped:     0, Total:    92, Duration: 16 s - Hamco.Api.Tests.dll (net10.0)
