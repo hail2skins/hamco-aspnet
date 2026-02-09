@@ -49,15 +49,13 @@ public class AuthViewController : BaseController
     /// <summary>
     /// Displays the login page.
     /// </summary>
-    /// <returns>Login view or redirect to API login endpoint.</returns>
+    /// <returns>Login view.</returns>
     /// <remarks>
-    /// Currently redirects to API login endpoint.
-    /// Future: Could show a Razor view with login form.
+    /// The view provides a login form that submits to /api/auth/login via JavaScript.
+    /// Includes a placeholder "Forgot password?" link for future implementation.
     /// </remarks>
     public IActionResult Login()
     {
-        // For now, redirect to API login endpoint
-        // Future: Could show a Razor view with login form
-        return Redirect("/api/auth/login");
+        return View();
     }
 }
