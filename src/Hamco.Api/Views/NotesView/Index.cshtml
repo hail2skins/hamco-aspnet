@@ -6,59 +6,28 @@
 
 <div class="row gx-4 gx-lg-5 justify-content-center">
     <div class="col-md-10 col-lg-10 col-xl-8">
+        <h1 class="mb-4">Deep Thoughts</h1>
+
         @if (Model.Any())
         {
-            <div class="table-responsive">
-                <table class="table table-hover table-striped align-middle">
-                    <thead class="table-dark">
-                        <tr>
-                            <th style="width: 25%;">Title</th>
-                            <th style="width: 35%;">Summary</th>
-                            <th style="width: 12%;">Created</th>
-                            <th style="width: 12%;">Updated</th>
-                            <th style="width: 16%;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var note in Model)
-                        {
-                            <tr>
-                                <td>
-                                    <a asp-controller="NotesView" asp-action="Detail" asp-route-id="@note.Id" class="text-decoration-none fw-bold">
-                                        @note.Title
-                                    </a>
-                                </td>
-                                <td class="text-muted">
-                                    @if (excerpts.ContainsKey(note.Id))
-                                    {
-                                        @excerpts[note.Id]
-                                    }
-                                </td>
-                                <td>@note.CreatedAt.ToString("MMM dd, yyyy")</td>
-                                <td>
-                                    @if (note.UpdatedAt != note.CreatedAt)
-                                    {
-                                        @note.UpdatedAt.ToString("MMM dd, yyyy")
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">—</span>
-                                    }
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <a asp-controller="NotesView" asp-action="Detail" asp-route-id="@note.Id" class="btn btn-outline-primary">View</a>
-                                        @if (User.IsInRole("Admin"))
-                                        {
-                                            <a asp-controller="AdminNotes" asp-action="Edit" asp-route-id="@note.Id" class="btn btn-outline-warning">Update</a>
-                                            <a asp-controller="AdminNotes" asp-action="Delete" asp-route-id="@note.Id" class="btn btn-outline-danger">Delete</a>
-                                        }
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+            <div class="notes-list">
+                @foreach (var note in Model)
+                {
+                    <article class="note-item mb-4 pb-4 border-bottom">
+                        <h5 class="mb-2">
+                            <a asp-controller="NotesView" asp-action="Detail" asp-route-id="@note.Id" class="text-decoration-none">
+                                @note.Title
+                            </a>
+                        </h5>
+                        <p class="text-muted mb-1">
+                            @if (excerpts.ContainsKey(note.Id))
+                            {
+                                @excerpts[note.Id]
+                            }
+                        </p>
+                        <small class="text-muted">@note.CreatedAt.ToString("MM/dd/yyyy")</small>
+                    </article>
+                }
             </div>
         }
         else
