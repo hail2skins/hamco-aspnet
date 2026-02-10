@@ -4,60 +4,56 @@
     ViewBag.Title = "Admin Slogans";
 }
 
-<div class="row gx-4 gx-lg-5 justify-content-center">
-    <div class="col-md-10 col-lg-10 col-xl-8">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Manage Slogans</h2>
-            <a asp-action="Create" class="btn btn-primary">Create New Slogan</a>
-        </div>
-
-        @if (Model.Any())
-        {
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Content</th>
-                            <th>Active</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var slogan in Model)
-                        {
-                            <tr>
-                                <td>@slogan.Id</td>
-                                <td>@slogan.Text</td>
-                                <td>
-                                    <form asp-action="Toggle" asp-route-id="@slogan.Id" method="post" class="d-inline">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" 
-                                                   checked="@slogan.IsActive" 
-                                                   onchange="this.form.submit()" />
-                                            <label class="form-check-label">
-                                                @(slogan.IsActive ? "Active" : "Inactive")
-                                            </label>
-                                        </div>
-                                    </form>
-                                </td>
-                                <td>@slogan.CreatedAt.ToString("MM/dd/yyyy")</td>
-                                <td>
-                                    <a asp-action="Edit" asp-route-id="@slogan.Id" class="btn btn-sm btn-warning">Edit</a>
-                                    <a asp-action="Delete" asp-route-id="@slogan.Id" class="btn btn-sm btn-danger">Delete</a>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-        else
-        {
-            <div class="alert alert-info">
-                <p class="mb-0">No slogans found. <a asp-action="Create">Create your first slogan</a></p>
-            </div>
-        }
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Manage Slogans</h2>
+    <a asp-action="Create" class="btn btn-primary">Create New Slogan</a>
 </div>
+
+@if (Model.Any())
+{
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Content</th>
+                    <th>Active</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var slogan in Model)
+                {
+                    <tr>
+                        <td>@slogan.Id</td>
+                        <td>@slogan.Text</td>
+                        <td>
+                            <form asp-action="Toggle" asp-route-id="@slogan.Id" method="post" class="d-inline">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           checked="@slogan.IsActive"
+                                           onchange="this.form.submit()" />
+                                    <label class="form-check-label">
+                                        @(slogan.IsActive ? "Active" : "Inactive")
+                                    </label>
+                                </div>
+                            </form>
+                        </td>
+                        <td>@slogan.CreatedAt.ToString("MM/dd/yyyy")</td>
+                        <td>
+                            <a asp-action="Edit" asp-route-id="@slogan.Id" class="btn btn-sm btn-warning">Edit</a>
+                            <a asp-action="Delete" asp-route-id="@slogan.Id" class="btn btn-sm btn-danger">Delete</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <p class="mb-0">No slogans found. <a asp-action="Create">Create your first slogan</a></p>
+    </div>
+}
