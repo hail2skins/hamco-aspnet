@@ -4,38 +4,34 @@
     var excerpts = ViewBag.PlainTextExcerpts as Dictionary<int, string> ?? new Dictionary<int, string>();
 }
 
-<div class="row gx-4 gx-lg-5 justify-content-center">
-    <div class="col-md-10 col-lg-10 col-xl-8">
-        <h1 class="mb-4">Deep Thoughts</h1>
+<h1 class="mb-4">Deep Thoughts</h1>
 
-        @if (Model.Any())
+@if (Model.Any())
+{
+    <div class="notes-list">
+        @foreach (var note in Model)
         {
-            <div class="notes-list">
-                @foreach (var note in Model)
-                {
-                    <article class="note-item mb-4 pb-4 border-bottom">
-                        <h5 class="mb-2">
-                            <a asp-controller="NotesView" asp-action="Detail" asp-route-id="@note.Id" class="text-decoration-none">
-                                @note.Title
-                            </a>
-                        </h5>
-                        <p class="text-muted mb-1">
-                            @if (excerpts.ContainsKey(note.Id))
-                            {
-                                @excerpts[note.Id]
-                            }
-                        </p>
-                        <small class="text-muted">@note.CreatedAt.ToString("MM/dd/yyyy")</small>
-                    </article>
-                }
-            </div>
-        }
-        else
-        {
-            <div class="text-center py-5">
-                <h3>No notes yet</h3>
-                <p class="text-muted">Check back soon for technical articles and insights.</p>
-            </div>
+            <article class="note-item mb-4 pb-4 border-bottom">
+                <h5 class="mb-2">
+                    <a asp-controller="NotesView" asp-action="Detail" asp-route-id="@note.Id" class="text-decoration-none">
+                        @note.Title
+                    </a>
+                </h5>
+                <p class="text-muted mb-1">
+                    @if (excerpts.ContainsKey(note.Id))
+                    {
+                        @excerpts[note.Id]
+                    }
+                </p>
+                <small class="text-muted">@note.CreatedAt.ToString("MM/dd/yyyy")</small>
+            </article>
         }
     </div>
-</div>
+}
+else
+{
+    <div class="text-center py-5">
+        <h3>No notes yet</h3>
+        <p class="text-muted">Check back soon for technical articles and insights.</p>
+    </div>
+}
