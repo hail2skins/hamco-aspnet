@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Hamco.Core.Models;
@@ -186,6 +187,7 @@ public class AuthController : ControllerBase
     ///   5. Manually promote additional admins via database if needed
     /// </remarks>
     [HttpPost("register")]  // Route: POST /api/auth/register
+    [EnableRateLimiting("auth")]  // Rate limit: 5 requests per 15 minutes per IP
     public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
     {
         // Step 0: Check if registration is allowed via environment variable
@@ -341,6 +343,7 @@ public class AuthController : ControllerBase
     ///   We use Unauthorized for invalid credentials (correct HTTP semantics).
     /// </remarks>
     [HttpPost("login")]  // Route: POST /api/auth/login
+    [EnableRateLimiting("auth")]  // Rate limit: 5 requests per 15 minutes per IP
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest request)
     {
         // Step 1: Find user by email

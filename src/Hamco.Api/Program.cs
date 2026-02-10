@@ -394,6 +394,57 @@ builder.Services.AddSingleton<IImageRandomizer, ImageRandomizer>();
 builder.Services.AddMemoryCache();
 
 // ============================================================================
+// RATE LIMITING CONFIGURATION
+// ============================================================================
+// Protect authentication endpoints from brute force attacks
+// Uses built-in .NET rate limiting (aspnetcore/src/Middleware/RateLimiting)
+//
+// Strategy: IP-based fixed window rate limiting
+//   - Auth endpoints: 5 requests per 15 minutes per IP
+//   - Other endpoints: No rate limiting (can add later)
+//
+// Response: 429 Too Many Requests with Retry-After header
+//
+// Security Notes:
+//   ✓ Prevents credential stuffing attacks
+//   ✓ Limits brute force password attempts
+//   ✓ IP-based (no account lockout needed)
+//   ✓ Automatic cleanup (window expiration)
+
+builder.Services.AddRateLimiter(options =>
+{
+    // Add fixed window policy for auth endpoints
+    options.AddPolicy("auth", context =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = builder.Configuration.GetValue<int>("RateLimiting:Auth:PermitLimit", 5),
+                Window = builder.Configuration.GetValue<TimeSpan>("RateLimiting:Auth:Window", TimeSpan.FromMinutes(15)),
+                QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0 // No queuing - reject immediately when limit hit
+            }));
+
+    // Configure rejection response
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        
+        if (context.Lease.TryGetMetadata(System.Threading.RateLimiting.MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+        }
+
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            error = "Too many requests",
+            message = "Rate limit exceeded. Please try again later.",
+            retryAfter = retryAfter.TotalSeconds
+        }, cancellationToken);
+    };
+});
+
+// ============================================================================
 // RAILWAY PORT CONFIGURATION
 // ============================================================================
 // Railway provides the PORT environment variable (typically 8080)
@@ -438,11 +489,46 @@ var app = builder.Build();
 //   4. Routing (match URL to controller action)
 //   5. Controller execution (your code)
 
-// Enable developer exception page for detailed error information
-// This shows stack traces, exception details, and request info when errors occur
-// Temporarily enabled for Railway debugging (normally only in Development)
-// TODO: Change to app.Environment.IsDevelopment() once Railway deployment is stable
-app.UseDeveloperExceptionPage();
+// ============================================================================
+// EXCEPTION HANDLING (Environment-based)
+// ============================================================================
+// Development: Show detailed error pages with stack traces for debugging
+// Production: Return generic JSON error responses (don't leak implementation details)
+
+if (app.Environment.IsDevelopment())
+{
+    // Development: Show detailed exception page with stack trace
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    // Production: Use generic error handler
+    // Returns JSON response instead of HTML error page
+    app.UseExceptionHandler(errorApp =>
+    {
+        errorApp.Run(async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+
+            var error = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+            if (error != null)
+            {
+                // Log the full exception (for server-side debugging)
+                var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogError(error.Error, "Unhandled exception occurred");
+
+                // Return generic error to client (don't leak stack traces!)
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    error = "Internal Server Error",
+                    message = "An unexpected error occurred. Please try again later.",
+                    requestId = context.TraceIdentifier
+                });
+            }
+        });
+    });
+}
 
 // Enable OpenAPI UI in development environment
 // app.Environment.IsDevelopment() checks if:
@@ -490,6 +576,11 @@ app.UseStaticFiles();
 // REQUIRED for MVC with views to work - must come before auth and endpoint mapping
 // Without this, attribute routes like [HttpGet("/")] won't be matched
 app.UseRouting();
+
+// Enable rate limiting middleware
+// Must come AFTER UseRouting() (needs endpoint metadata)
+// Must come BEFORE UseAuthentication() (check limits before auth processing)
+app.UseRateLimiter();
 
 // Enable authentication middleware
 // app.UseAuthentication() middleware:
