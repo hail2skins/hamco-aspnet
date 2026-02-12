@@ -7,8 +7,6 @@
 <div class="row gx-4 gx-lg-5 justify-content-center">
     <div class="col-md-10 col-lg-10 col-xl-8">
         <p>Please sign in to your account.</p>
-        
-        <!-- Alert container for messages -->
         <div id="alertContainer"></div>
 
         <form id="loginForm">
@@ -20,7 +18,7 @@
                 <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
                 <label for="password">Password</label>
             </div>
-            
+
             <div class="d-grid gap-2 mb-3">
                 <button type="submit" class="btn btn-primary" id="submitBtn">
                     <span id="submitText">Sign In</span>
@@ -29,115 +27,73 @@
             </div>
 
             <div class="text-center">
-                <a href="#" class="text-muted text-decoration-none disabled" onclick="return false;" style="cursor: not-allowed;" title="Coming soon">
-                    Forgot password?
-                </a>
+                <a href="/auth/forgot-password" class="text-decoration-none">Forgot password?</a>
             </div>
         </form>
 
         <hr class="my-4" />
-        
+
         <div class="text-center">
-            <p class="text-muted">
-                Don't have an account? <a asp-controller="Auth" asp-action="Register">Register here</a>
-            </p>
+            <p class="text-muted">Don't have an account? <a href="/auth/register">Register here</a></p>
         </div>
     </div>
 </div>
 
 @section Scripts {
 <script>
+    const alertContainer = document.getElementById('alertContainer');
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('verified') === '1') {
+        alertContainer.innerHTML = '<div class="alert alert-success">Email verified. You can log in now.</div>';
+    } else if (params.get('error')) {
+        alertContainer.innerHTML = '<div class="alert alert-danger">Invalid or expired verification link.</div>';
+    }
+
     document.getElementById('loginForm').addEventListener('submit', async function(e) {
         e.preventDefault();
-        
+
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         const submitBtn = document.getElementById('submitBtn');
         const submitText = document.getElementById('submitText');
         const submitSpinner = document.getElementById('submitSpinner');
-        const alertContainer = document.getElementById('alertContainer');
-        
-        // Clear previous alerts
-        alertContainer.innerHTML = '';
-        
-        // Disable submit button and show spinner
+
         submitBtn.disabled = true;
         submitText.classList.add('d-none');
         submitSpinner.classList.remove('d-none');
-        
+
         try {
-            // Step 1: Login via API to get JWT token
             const loginResponse = await fetch('/api/auth/login', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
-            
+
+            const data = await loginResponse.json();
+
             if (loginResponse.ok) {
-                // Step 2: Extract JWT token from response
-                const loginData = await loginResponse.json();
-                const token = loginData.token;
-                
-                // Step 3: Set authentication cookie via /api/auth/cookie
                 const cookieResponse = await fetch('/api/auth/cookie', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ token })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: data.token })
                 });
-                
+
                 if (cookieResponse.ok) {
-                    // Step 4: Cookie set successfully - redirect to home
-                    // Next page load will have User.Identity.IsAuthenticated = true
                     window.location.href = '/';
-                } else {
-                    // Cookie setting failed (shouldn't happen)
-                    alertContainer.innerHTML = `
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <strong>Error:</strong> Login succeeded but cookie setup failed. Please try again.
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    `;
-                    
-                    // Re-enable submit button
-                    submitBtn.disabled = false;
-                    submitText.classList.remove('d-none');
-                    submitSpinner.classList.add('d-none');
+                    return;
                 }
+
+                alertContainer.innerHTML = '<div class="alert alert-danger">Login succeeded but cookie setup failed. Please try again.</div>';
             } else {
-                // Login failed - show error message
-                const data = await loginResponse.json();
-                const errorMessage = data.message || 'Login failed. Please check your credentials.';
-                
-                alertContainer.innerHTML = `
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <strong>Error:</strong> ${errorMessage}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                `;
-                
-                // Re-enable submit button
-                submitBtn.disabled = false;
-                submitText.classList.remove('d-none');
-                submitSpinner.classList.add('d-none');
+                alertContainer.innerHTML = `<div class="alert alert-danger">${data.message || 'Login failed.'}</div>`;
             }
-        } catch (error) {
-            // Network or other error
-            alertContainer.innerHTML = `
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <strong>Error:</strong> Unable to connect to the server. Please try again.
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            `;
-            
-            // Re-enable submit button
-            submitBtn.disabled = false;
-            submitText.classList.remove('d-none');
-            submitSpinner.classList.add('d-none');
+        } catch {
+            alertContainer.innerHTML = '<div class="alert alert-danger">Unable to connect to server. Please try again.</div>';
         }
+
+        submitBtn.disabled = false;
+        submitText.classList.remove('d-none');
+        submitSpinner.classList.add('d-none');
     });
 </script>
 }

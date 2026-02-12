@@ -371,6 +371,10 @@ builder.Services.AddAuthServices(jwtKey, jwtIssuer, jwtAudience);
 // Scoped lifetime: One instance per HTTP request (uses DbContext)
 builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 
+// Register transactional email service (Mailjet)
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<ITransactionalEmailService, MailjetTransactionalEmailService>();
+
 // Register Markdown rendering service
 // IMarkdownService: Renders Markdown to HTML with syntax highlighting and XSS protection
 // MarkdownService: Implementation using Markdig + Markdown.ColorCode + HtmlSanitizer

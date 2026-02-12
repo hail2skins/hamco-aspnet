@@ -131,6 +131,28 @@ public class User
     /// Default: false (users must verify email)
     /// </remarks>
     public bool IsEmailVerified { get; set; } = false;
+
+    /// <summary>
+    /// SHA-256 hash of the current email verification token.
+    /// Empty when no active verification token exists.
+    /// </summary>
+    public string? EmailVerificationTokenHash { get; set; }
+
+    /// <summary>
+    /// UTC expiration timestamp for the email verification token.
+    /// </summary>
+    public DateTime? EmailVerificationTokenExpiresAt { get; set; }
+
+    /// <summary>
+    /// SHA-256 hash of the current password reset token.
+    /// Empty when no active reset token exists.
+    /// </summary>
+    public string? PasswordResetTokenHash { get; set; }
+
+    /// <summary>
+    /// UTC expiration timestamp for the password reset token.
+    /// </summary>
+    public DateTime? PasswordResetTokenExpiresAt { get; set; }
     
     /// <summary>
     /// Indicates whether the user has administrator privileges.

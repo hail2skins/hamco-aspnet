@@ -297,6 +297,12 @@ public class HamcoDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasColumnName("created_at")
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");  // Database generates default
+
+            // Email verification and password reset token fields
+            entity.Property(e => e.EmailVerificationTokenHash);
+            entity.Property(e => e.EmailVerificationTokenExpiresAt);
+            entity.Property(e => e.PasswordResetTokenHash);
+            entity.Property(e => e.PasswordResetTokenExpiresAt);
             
             // Ignore(): Exclude property from database mapping
             // Roles property is NOT stored in database

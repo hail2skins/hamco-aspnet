@@ -1,367 +1,519 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using Hamco.Core.Models;
+using Hamco.Core.Services;
+using Hamco.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Hamco.Api.Tests;
 
-/// <summary>
-/// Integration tests for AuthController authentication endpoints.
-/// Tests user registration, login, and profile functionality.
-/// </summary>
-/// <remarks>
-/// TDD Approach:
-/// 1. RED phase: Write tests first (they FAIL because implementation incomplete)
-/// 2. GREEN phase: Implement auth endpoints to make tests PASS
-/// 3. REFACTOR phase: Clean up code while tests remain green
-/// 
-/// Test coverage:
-/// - Registration (success, duplicate email, invalid data)
-/// - Login (success, wrong credentials, non-existent user)
-/// - Profile (authenticated, unauthenticated)
-/// - Password reset stubs (future Mailjet integration)
-/// 
-/// ISOLATED DATABASE PER TEST:
-/// Each test creates its own TestWebApplicationFactory with isolated SQLite in-memory database.
-/// </remarks>
-public class AuthControllerTests : IDisposable
+public class AuthControllerTests
 {
-    private readonly TestWebApplicationFactory _factory;
-    private readonly HttpClient _client;
-
-    public AuthControllerTests()
-    {
-        // Create a NEW factory for EACH test instance
-        // This ensures complete database isolation between tests
-        _factory = new TestWebApplicationFactory();
-        _client = _factory.CreateClient();
-    }
-    
-    public void Dispose()
-    {
-        _client?.Dispose();
-        _factory?.Dispose();
-    }
-
-    // ============================================================================
-    // REGISTRATION TESTS (POST /api/auth/register)
-    // ============================================================================
-
-    /// <summary>
-    /// Test: Valid registration creates user and returns 201 with token.
-    /// </summary>
     [Fact]
-    public async Task Register_ValidData_CreatesUserReturns201()
+    public async Task Register_NewEmail_CreatesUnverifiedUserAndSendsVerificationEmail()
     {
-        // ARRANGE: Prepare valid registration data
-        var registerRequest = new RegisterRequest
+        var spy = new SpyTransactionalEmailService();
+        using var ctx = CreateContext(spy);
+
+        var email = $"new_{Guid.NewGuid():N}@example.com";
+        var response = await ctx.Client.PostAsJsonAsync("/api/auth/register", new RegisterRequest
         {
-            Username = "TestUser",
-            Email = $"test_{Guid.NewGuid()}@example.com", // Unique email to avoid conflicts
-            Password = "SecurePassword123"
-        };
+            Username = "newuser",
+            Email = email,
+            Password = "Password123!"
+        });
 
-        // ACT: POST /api/auth/register
-        var response = await _client.PostAsJsonAsync("/api/auth/register", registerRequest);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        // ASSERT: Should return 201 Created
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var user = await ctx.Db.Users.SingleAsync(u => u.Email == email);
+        Assert.False(user.IsEmailVerified);
+        Assert.False(string.IsNullOrWhiteSpace(user.EmailVerificationTokenHash));
+        Assert.NotNull(user.EmailVerificationTokenExpiresAt);
 
-        // Verify response contains auth data
-        var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        Assert.NotNull(authResponse);
-        
-        // Verify JWT token is provided (non-empty string)
-        Assert.False(string.IsNullOrEmpty(authResponse.Token));
-        
-        // Verify user ID is assigned (GUID format)
-        Assert.False(string.IsNullOrEmpty(authResponse.UserId));
-        
-        // Verify email matches request
-        Assert.Equal(registerRequest.Email, authResponse.Email);
-        
-        // Note: Password hash should NOT be in response!
-        // We can't verify this directly in AuthResponse,
-        // but we verify password works by logging in next
+        var sent = Assert.Single(spy.VerificationEmails);
+        Assert.Equal(email, sent.ToEmail);
+        Assert.Contains("/auth/verify-email?token=", sent.Link);
     }
 
-    /// <summary>
-    /// Test: Registering with duplicate email returns 409 Conflict.
-    /// </summary>
     [Fact]
-    public async Task Register_DuplicateEmail_Returns409()
+    public async Task Register_ExistingVerifiedEmail_Returns409()
     {
-        // ARRANGE: Register user once
-        var uniqueEmail = $"duplicate_{Guid.NewGuid()}@example.com";
-        var firstRequest = new RegisterRequest
+        var spy = new SpyTransactionalEmailService();
+        using var ctx = CreateContext(spy);
+
+        var email = $"verified_{Guid.NewGuid():N}@example.com";
+        await RegisterAndMarkVerifiedAsync(ctx, email);
+
+        var response = await ctx.Client.PostAsJsonAsync("/api/auth/register", new RegisterRequest
         {
-            Username = "FirstUser",
-            Email = uniqueEmail,
-            Password = "Password123"
-        };
-        
-        var firstResponse = await _client.PostAsJsonAsync("/api/auth/register", firstRequest);
-        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode); // First registration succeeds
+            Username = "otheruser",
+            Email = email,
+            Password = "AnotherPassword123!"
+        });
 
-        // Prepare duplicate registration (same email, different username)
-        var duplicateRequest = new RegisterRequest
-        {
-            Username = "SecondUser",
-            Email = uniqueEmail, // Same email!
-            Password = "DifferentPassword456"
-        };
-
-        // ACT: Try to register with same email
-        var response = await _client.PostAsJsonAsync("/api/auth/register", duplicateRequest);
-
-        // ASSERT: Should return 409 Conflict (or 400 Bad Request depending on implementation)
-        // Current implementation returns 400, but 409 is more semantically correct
-        // We'll accept either for now, then standardize to 409 in implementation
-        Assert.True(
-            response.StatusCode == HttpStatusCode.Conflict || 
-            response.StatusCode == HttpStatusCode.BadRequest
-        );
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
-    /// <summary>
-    /// Test: Registering with invalid data returns 400 Bad Request.
-    /// </summary>
     [Fact]
-    public async Task Register_InvalidData_Returns400()
+    public async Task Register_ExistingUnverifiedEmail_ResendsTokenWithoutDuplicateUser()
     {
-        // ARRANGE: Prepare invalid registration data (empty password)
-        var invalidRequest = new RegisterRequest
+        var spy = new SpyTransactionalEmailService();
+        using var ctx = CreateContext(spy);
+
+        var email = $"unverified_{Guid.NewGuid():N}@example.com";
+
+        await ctx.Client.PostAsJsonAsync("/api/auth/register", new RegisterRequest
         {
-            Username = "TestUser",
-            Email = "valid@example.com",
-            Password = "" // Invalid: violates [MinLength(6)]
-        };
+            Username = "user1",
+            Email = email,
+            Password = "Password123!"
+        });
+        var originalHash = (await ctx.Db.Users.SingleAsync(u => u.Email == email)).EmailVerificationTokenHash;
 
-        // ACT: POST /api/auth/register with invalid data
-        var response = await _client.PostAsJsonAsync("/api/auth/register", invalidRequest);
+        var second = await ctx.Client.PostAsJsonAsync("/api/auth/register", new RegisterRequest
+        {
+            Username = "user2",
+            Email = email,
+            Password = "Password123!"
+        });
 
-        // ASSERT: Should return 400 Bad Request
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+
+        ctx.Db.ChangeTracker.Clear();
+        var users = await ctx.Db.Users.AsNoTracking().Where(u => u.Email == email).ToListAsync();
+        var user = Assert.Single(users);
+
+        Assert.NotEqual(originalHash, user.EmailVerificationTokenHash);
+        Assert.Equal(2, spy.VerificationEmails.Count);
+    }
+
+    [Fact]
+    public async Task VerifyEmail_ValidToken_MarksUserVerifiedAndRedirects()
+    {
+        var spy = new SpyTransactionalEmailService();
+        using var ctx = CreateContext(spy, allowAutoRedirect: false);
+
+        var email = $"verify_{Guid.NewGuid():N}@example.com";
+        await ctx.Client.PostAsJsonAsync("/api/auth/register", new RegisterRequest
+        {
+            Username = "verify-user",
+            Email = email,
+            Password = "Password123!"
+        });
+
+        var token = ExtractTokenFromLink(spy.VerificationEmails.Last().Link);
+        var response = await ctx.Client.GetAsync($"/api/auth/verify-email?token={Uri.EscapeDataString(token)}");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/auth/login?verified=1", response.Headers.Location?.ToString());
+
+        var user = await ctx.Db.Users.SingleAsync(u => u.Email == email);
+        Assert.True(user.IsEmailVerified);
+        Assert.Null(user.EmailVerificationTokenHash);
+        Assert.Null(user.EmailVerificationTokenExpiresAt);
+    }
+
+    [Fact]
+    public async Task VerifyEmail_ExpiredToken_FailsAndRedirects()
+    {
+        var spy = new SpyTransactionalEmailService();
+        using var ctx = CreateContext(spy, allowAutoRedirect: false);
+
+        var email = $"expiredverify_{Guid.NewGuid():N}@example.com";
+        await ctx.Client.PostAsJsonAsync("/api/auth/register", new RegisterRequest
+        {
+            Username = "expired-user",
+            Email = email,
+            Password = "Password123!"
+        });
+
+        var token = ExtractTokenFromLink(spy.VerificationEmails.Last().Link);
+        var user = await ctx.Db.Users.SingleAsync(u => u.Email == email);
+        user.EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+        await ctx.Db.SaveChangesAsync();
+
+        var response = await ctx.Client.GetAsync($"/api/auth/verify-email?token={Uri.EscapeDataString(token)}");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/auth/login?error=expired_or_invalid_verification_token", response.Headers.Location?.ToString());
+    }
+
+    [Fact]
+    public async Task Login_UnverifiedUser_Returns403()
+    {
+        var spy = new SpyTransactionalEmailService();
+        using var ctx = CreateContext(spy);
+
+        var email = $"loginunverified_{Guid.NewGuid():N}@example.com";
+        await ctx.Client.PostAsJsonAsync("/api/auth/register", new RegisterRequest
+        {
+            Username = "login-unverified",
+            Email = email,
+            Password = "Password123!"
+        });
+
+        var response = await ctx.Client.PostAsJsonAsync("/api/auth/login", new LoginRequest
+        {
+            Email = email,
+            Password = "Password123!"
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_VerifiedUser_Returns200()
+    {
+        var spy = new SpyTransactionalEmailService();
+        using var ctx = CreateContext(spy);
+
+        var email = $"loginverified_{Guid.NewGuid():N}@example.com";
+        await RegisterAndMarkVerifiedAsync(ctx, email);
+
+        var response = await ctx.Client.PostAsJsonAsync("/api/auth/login", new LoginRequest
+        {
+            Email = email,
+            Password = "Password123!"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_ExistingEmail_GeneratesTokenAndSendsEmail()
+    {
+        var spy = new SpyTransactionalEmailService();
+        using var ctx = CreateContext(spy);
+
+        var email = $"forgot_{Guid.NewGuid():N}@example.com";
+        await RegisterAndMarkVerifiedAsync(ctx, email);
+
+        var response = await ctx.Client.PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest { Email = email });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        ctx.Db.ChangeTracker.Clear();
+        var user = await ctx.Db.Users.AsNoTracking().SingleAsync(u => u.Email == email);
+        Assert.False(string.IsNullOrWhiteSpace(user.PasswordResetTokenHash));
+        Assert.NotNull(user.PasswordResetTokenExpiresAt);
+
+        Assert.Single(spy.PasswordResetEmails);
+        Assert.Contains("/auth/reset-password?token=", spy.PasswordResetEmails.Last().Link);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_UnknownEmail_ReturnsGenericSuccessWithoutEnumeration()
+    {
+        var spy = new SpyTransactionalEmailService();
+        using var ctx = CreateContext(spy);
+
+        var response = await ctx.Client.PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest
+        {
+            Email = $"missing_{Guid.NewGuid():N}@example.com"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("If your email is registered", await response.Content.ReadAsStringAsync());
+        Assert.Empty(spy.PasswordResetEmails);
+    }
+
+    [Fact]
+    public async Task ResetPassword_ValidToken_UpdatesPassword()
+    {
+        var spy = new SpyTransactionalEmailService();
+        using var ctx = CreateContext(spy);
+
+        var email = $"resetok_{Guid.NewGuid():N}@example.com";
+        await RegisterAndMarkVerifiedAsync(ctx, email);
+
+        await ctx.Client.PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest { Email = email });
+        var token = ExtractTokenFromLink(spy.PasswordResetEmails.Last().Link);
+
+        var resetResponse = await ctx.Client.PostAsJsonAsync("/api/auth/reset-password", new ResetPasswordRequest
+        {
+            Token = token,
+            NewPassword = "BrandNewPassword123!"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, resetResponse.StatusCode);
+
+        var oldLogin = await ctx.Client.PostAsJsonAsync("/api/auth/login", new LoginRequest { Email = email, Password = "Password123!" });
+        var newLogin = await ctx.Client.PostAsJsonAsync("/api/auth/login", new LoginRequest { Email = email, Password = "BrandNewPassword123!" });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, oldLogin.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, newLogin.StatusCode);
+    }
+
+    [Fact]
+    public async Task ResetPassword_ExpiredToken_Returns400()
+    {
+        var spy = new SpyTransactionalEmailService();
+        using var ctx = CreateContext(spy);
+
+        var email = $"resetexpired_{Guid.NewGuid():N}@example.com";
+        await RegisterAndMarkVerifiedAsync(ctx, email);
+
+        await ctx.Client.PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest { Email = email });
+        var token = ExtractTokenFromLink(spy.PasswordResetEmails.Last().Link);
+
+        var user = await ctx.Db.Users.SingleAsync(u => u.Email == email);
+        user.PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+        await ctx.Db.SaveChangesAsync();
+
+        var response = await ctx.Client.PostAsJsonAsync("/api/auth/reset-password", new ResetPasswordRequest
+        {
+            Token = token,
+            NewPassword = "BrandNewPassword123!"
+        });
+
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    // ============================================================================
-    // LOGIN TESTS (POST /api/auth/login)
-    // ============================================================================
-
-    /// <summary>
-    /// Test: Valid credentials return 200 OK with JWT token.
-    /// </summary>
-    [Fact]
-    public async Task Login_ValidCredentials_Returns200WithToken()
+    private static async Task RegisterAndMarkVerifiedAsync(TestContext ctx, string email)
     {
-        // ARRANGE: Register user first
-        var email = $"login_{Guid.NewGuid()}@example.com";
-        var password = "MySecurePassword123";
-        
-        var registerRequest = new RegisterRequest
+        var response = await ctx.Client.PostAsJsonAsync("/api/auth/register", new RegisterRequest
         {
-            Username = "LoginTestUser",
+            Username = "verified-user",
             Email = email,
-            Password = password
-        };
-        
-        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", registerRequest);
-        Assert.Equal(HttpStatusCode.Created, registerResponse.StatusCode);
+            Password = "Password123!"
+        });
 
-        // Prepare login request
-        var loginRequest = new LoginRequest
-        {
-            Email = email,
-            Password = password
-        };
-
-        // ACT: POST /api/auth/login
-        var response = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
-
-        // ASSERT: Should return 200 OK
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        // Verify response contains auth data
-        var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        Assert.NotNull(authResponse);
-        
-        // Verify JWT token is provided
-        Assert.False(string.IsNullOrEmpty(authResponse.Token));
-        
-        // Verify user info matches
-        Assert.Equal(email, authResponse.Email);
-        Assert.False(string.IsNullOrEmpty(authResponse.UserId));
-        
-        // Note: Password hash should NOT be in response!
+        var user = await ctx.Db.Users.SingleAsync(u => u.Email == email);
+        user.IsEmailVerified = true;
+        user.EmailVerificationTokenHash = null;
+        user.EmailVerificationTokenExpiresAt = null;
+        await ctx.Db.SaveChangesAsync();
     }
 
-    /// <summary>
-    /// Test: Invalid password returns 401 Unauthorized.
-    /// </summary>
-    [Fact]
-    public async Task Login_InvalidCredentials_Returns401()
+    private static TestContext CreateContext(SpyTransactionalEmailService emailSpy, bool allowAutoRedirect = true)
     {
-        // ARRANGE: Register user
-        var email = $"wrongpass_{Guid.NewGuid()}@example.com";
-        var correctPassword = "CorrectPassword123";
-        
-        var registerRequest = new RegisterRequest
+        var baseFactory = new TestWebApplicationFactory();
+        var factory = baseFactory.WithWebHostBuilder(builder =>
         {
-            Username = "WrongPassUser",
+            builder.ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["ALLOW_REGISTRATION"] = "true",
+                    ["APP_BASE_URL"] = "https://hamco.test"
+                });
+            });
+
+            builder.ConfigureServices(services =>
+            {
+                var descriptors = services.Where(s => s.ServiceType == typeof(ITransactionalEmailService)).ToList();
+                foreach (var descriptor in descriptors)
+                {
+                    services.Remove(descriptor);
+                }
+
+                services.AddSingleton<ITransactionalEmailService>(emailSpy);
+            });
+        });
+
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = allowAutoRedirect });
+        var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<HamcoDbContext>();
+
+        return new TestContext(baseFactory, factory, scope, db, client);
+    }
+
+    public static string ExtractTokenFromLink(string link)
+    {
+        var uri = new Uri(link);
+        var query = uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries);
+        var tokenPart = query.Single(p => p.StartsWith("token=", StringComparison.Ordinal));
+        return Uri.UnescapeDataString(tokenPart.Substring("token=".Length));
+    }
+
+    private sealed class TestContext : IDisposable
+    {
+        private readonly TestWebApplicationFactory _baseFactory;
+        private readonly WebApplicationFactory<Program> _factory;
+        private readonly IServiceScope _scope;
+
+        public HamcoDbContext Db { get; }
+        public HttpClient Client { get; }
+
+        public TestContext(
+            TestWebApplicationFactory baseFactory,
+            WebApplicationFactory<Program> factory,
+            IServiceScope scope,
+            HamcoDbContext db,
+            HttpClient client)
+        {
+            _baseFactory = baseFactory;
+            _factory = factory;
+            _scope = scope;
+            Db = db;
+            Client = client;
+        }
+
+        public void Dispose()
+        {
+            Client.Dispose();
+            Db.Dispose();
+            _scope.Dispose();
+            _factory.Dispose();
+            _baseFactory.Dispose();
+        }
+    }
+}
+
+public class AuthTokenGenerationTests
+{
+    [Fact]
+    public async Task VerificationTokens_AreHighEntropyAndUnique()
+    {
+        var spy = new SpyTransactionalEmailService();
+        using var ctx = CreateContext(spy);
+
+        var tokens = new HashSet<string>(StringComparer.Ordinal);
+
+        for (var i = 0; i < 5; i++)
+        {
+            var response = await ctx.Client.PostAsJsonAsync("/api/auth/register", new RegisterRequest
+            {
+                Username = $"u{i}",
+                Email = $"entropy_{i}_{Guid.NewGuid():N}@example.com",
+                Password = "Password123!"
+            });
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var token = AuthControllerTests.ExtractTokenFromLink(spy.VerificationEmails.Last().Link);
+            Assert.Matches("^[A-Za-z0-9_-]+$", token);
+            Assert.True(token.Length >= 43);
+            Assert.True(tokens.Add(token));
+        }
+    }
+
+    [Fact]
+    public async Task VerificationAndResetTokens_AreStoredAsSha256HashNotPlaintext()
+    {
+        var spy = new SpyTransactionalEmailService();
+        using var ctx = CreateContext(spy);
+
+        var email = $"hashing_{Guid.NewGuid():N}@example.com";
+        await ctx.Client.PostAsJsonAsync("/api/auth/register", new RegisterRequest
+        {
+            Username = "hashing-user",
             Email = email,
-            Password = correctPassword
-        };
-        
-        await _client.PostAsJsonAsync("/api/auth/register", registerRequest);
+            Password = "Password123!"
+        });
 
-        // Prepare login with WRONG password
-        var loginRequest = new LoginRequest
+        var verificationToken = AuthControllerTests.ExtractTokenFromLink(spy.VerificationEmails.Last().Link);
+        var user = await ctx.Db.Users.SingleAsync(u => u.Email == email);
+        Assert.Equal(Sha256Hex(verificationToken), user.EmailVerificationTokenHash);
+        Assert.NotEqual(verificationToken, user.EmailVerificationTokenHash);
+
+        user.IsEmailVerified = true;
+        await ctx.Db.SaveChangesAsync();
+
+        await ctx.Client.PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest { Email = email });
+        var resetToken = AuthControllerTests.ExtractTokenFromLink(spy.PasswordResetEmails.Last().Link);
+
+        ctx.Db.ChangeTracker.Clear();
+        user = await ctx.Db.Users.AsNoTracking().SingleAsync(u => u.Email == email);
+        Assert.Equal(Sha256Hex(resetToken), user.PasswordResetTokenHash);
+        Assert.NotEqual(resetToken, user.PasswordResetTokenHash);
+    }
+
+    private static TestContext CreateContext(SpyTransactionalEmailService emailSpy)
+    {
+        var baseFactory = new TestWebApplicationFactory();
+        var factory = baseFactory.WithWebHostBuilder(builder =>
         {
-            Email = email,
-            Password = "WrongPassword456" // Incorrect!
-        };
+            builder.ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["ALLOW_REGISTRATION"] = "true",
+                    ["APP_BASE_URL"] = "https://hamco.test"
+                });
+            });
 
-        // ACT: Try to login with wrong password
-        var response = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
+            builder.ConfigureServices(services =>
+            {
+                var descriptors = services.Where(s => s.ServiceType == typeof(ITransactionalEmailService)).ToList();
+                foreach (var descriptor in descriptors)
+                {
+                    services.Remove(descriptor);
+                }
 
-        // ASSERT: Should return 401 Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        
-        // SECURITY: Error message should be generic (don't reveal if email exists)
-        // We don't assert specific message here, but implementation should use:
-        // "Invalid email or password" (same for wrong email AND wrong password)
+                services.AddSingleton<ITransactionalEmailService>(emailSpy);
+            });
+        });
+
+        var client = factory.CreateClient();
+        var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<HamcoDbContext>();
+
+        return new TestContext(baseFactory, factory, scope, db, client);
     }
 
-    /// <summary>
-    /// Test: Non-existent user returns 401 Unauthorized (same as wrong password).
-    /// </summary>
-    [Fact]
-    public async Task Login_NonExistentUser_Returns401()
+    private static string Sha256Hex(string token)
     {
-        // ARRANGE: Prepare login for user that doesn't exist
-        var loginRequest = new LoginRequest
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+        return Convert.ToHexString(hash);
+    }
+
+    private sealed class TestContext : IDisposable
+    {
+        private readonly TestWebApplicationFactory _baseFactory;
+        private readonly WebApplicationFactory<Program> _factory;
+        private readonly IServiceScope _scope;
+
+        public HamcoDbContext Db { get; }
+        public HttpClient Client { get; }
+
+        public TestContext(
+            TestWebApplicationFactory baseFactory,
+            WebApplicationFactory<Program> factory,
+            IServiceScope scope,
+            HamcoDbContext db,
+            HttpClient client)
         {
-            Email = $"nonexistent_{Guid.NewGuid()}@example.com",
-            Password = "SomePassword123"
-        };
+            _baseFactory = baseFactory;
+            _factory = factory;
+            _scope = scope;
+            Db = db;
+            Client = client;
+        }
 
-        // ACT: Try to login with non-existent email
-        var response = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
-
-        // ASSERT: Should return 401 Unauthorized (same as wrong password)
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        
-        // SECURITY: Error message must be identical to wrong password case
-        // Don't leak information about which emails are registered!
-    }
-
-    // ============================================================================
-    // PROFILE TESTS (GET /api/auth/profile)
-    // ============================================================================
-
-    /// <summary>
-    /// Test: Authenticated request returns 200 with user profile.
-    /// </summary>
-    [Fact]
-    public async Task GetProfile_Authenticated_Returns200WithUser()
-    {
-        // ARRANGE: Register and login to get token
-        var email = $"profile_{Guid.NewGuid()}@example.com";
-        var password = "ProfilePassword123";
-        
-        var registerRequest = new RegisterRequest
+        public void Dispose()
         {
-            Username = "ProfileUser",
-            Email = email,
-            Password = password
-        };
-        
-        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", registerRequest);
-        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponse>();
-        Assert.NotNull(authResponse);
+            Client.Dispose();
+            Db.Dispose();
+            _scope.Dispose();
+            _factory.Dispose();
+            _baseFactory.Dispose();
+        }
+    }
+}
 
-        // Create new HTTP client with Authorization header
-        var authenticatedClient = _factory.CreateClient();
-        authenticatedClient.DefaultRequestHeaders.Authorization = 
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse.Token);
+public sealed class SpyTransactionalEmailService : ITransactionalEmailService
+{
+    public List<(string ToEmail, string Link)> VerificationEmails { get; } = new();
+    public List<(string ToEmail, string Link)> PasswordResetEmails { get; } = new();
 
-        // ACT: GET /api/auth/profile with Bearer token
-        var response = await authenticatedClient.GetAsync("/api/auth/profile");
-
-        // ASSERT: Should return 200 OK
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        // Verify response contains user info
-        var userResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        Assert.NotNull(userResponse);
-        
-        // Verify user data matches
-        Assert.Equal(authResponse.UserId, userResponse.UserId);
-        Assert.Equal(email, userResponse.Email);
-        
-        // Password hash should NOT be in response!
-        // (Can't verify directly, but implementation must exclude it)
+    public Task SendVerificationEmailAsync(string toEmail, string verificationLink)
+    {
+        VerificationEmails.Add((toEmail, verificationLink));
+        return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Test: Unauthenticated request returns 401 Unauthorized.
-    /// </summary>
-    [Fact]
-    public async Task GetProfile_Unauthenticated_Returns401()
+    public Task SendPasswordResetEmailAsync(string toEmail, string resetLink)
     {
-        // ACT: GET /api/auth/profile WITHOUT Authorization header
-        var response = await _client.GetAsync("/api/auth/profile");
-
-        // ASSERT: Should return 401 Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    // ============================================================================
-    // PASSWORD RESET TESTS (Stubs for future Mailjet integration)
-    // ============================================================================
-
-    /// <summary>
-    /// Test: Forgot password endpoint returns 200 with stub message.
-    /// </summary>
-    [Fact]
-    public async Task ForgotPassword_ValidEmail_Returns200Stub()
-    {
-        // ARRANGE: Prepare forgot password request
-        var forgotPasswordRequest = new { Email = "someone@example.com" };
-
-        // ACT: POST /api/auth/forgot-password
-        var response = await _client.PostAsJsonAsync("/api/auth/forgot-password", forgotPasswordRequest);
-
-        // ASSERT: Should return 200 OK with stub message
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        
-        // Response should indicate feature not yet implemented
-        var responseBody = await response.Content.ReadAsStringAsync();
-        Assert.Contains("not implemented", responseBody, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
-    /// Test: Reset password endpoint returns 200 with stub message.
-    /// </summary>
-    [Fact]
-    public async Task ResetPassword_Returns200Stub()
-    {
-        // ARRANGE: Prepare reset password request
-        var resetPasswordRequest = new 
-        { 
-            Token = "some-reset-token", 
-            NewPassword = "NewPassword123" 
-        };
-
-        // ACT: POST /api/auth/reset-password
-        var response = await _client.PostAsJsonAsync("/api/auth/reset-password", resetPasswordRequest);
-
-        // ASSERT: Should return 200 OK with stub message
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        
-        // Response should indicate feature not yet implemented
-        var responseBody = await response.Content.ReadAsStringAsync();
-        Assert.Contains("not implemented", responseBody, StringComparison.OrdinalIgnoreCase);
+        PasswordResetEmails.Add((toEmail, resetLink));
+        return Task.CompletedTask;
     }
 }

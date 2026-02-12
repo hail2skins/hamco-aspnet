@@ -1,399 +1,161 @@
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using Hamco.Core.Models;
+using Hamco.Core.Services;
+using Hamco.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using Hamco.Core.Models;
-using Hamco.Core.Services;
-using Hamco.Data;
-using Microsoft.Extensions.Configuration;
 
 namespace Hamco.Api.Controllers;
 
-/// <summary>
-/// API controller for user authentication and registration.
-/// Handles user account creation and login with JWT token generation.
-/// </summary>
-/// <remarks>
-/// REST API endpoints:
-///   POST /api/auth/register - Create new user account (first user becomes admin)
-///   POST /api/auth/login    - Authenticate user and get JWT token
-///   GET  /api/auth/profile  - Get current user's profile (requires auth)
-/// 
-/// Authentication flow:
-/// 1. User registers (POST /api/auth/register)
-///    → Password hashed with BCrypt
-///    → User saved to database
-///    → First registered user automatically becomes admin (IsAdmin = true)
-///    → JWT token generated and returned
-/// 
-/// 2. User logs in (POST /api/auth/login)
-///    → Email lookup in database
-///    → Password verification with BCrypt
-///    → JWT token generated and returned
-/// 
-/// 3. User makes authenticated requests
-///    → Include token: Authorization: Bearer {token}
-///    → JWT middleware validates token
-///    → User identity available in controllers
-///    → [Authorize] attributes enforce authentication
-///    → [Authorize(Roles = "Admin")] enforces admin-only access
-/// 
-/// Authorization in Hamco:
-///   - Public endpoints: Register, Login, Get Notes (blog-style public read)
-///   - Authenticated endpoints: Get Profile (any logged-in user)
-///   - Admin-only endpoints: Create/Update/Delete Notes (content management)
-/// 
-/// Security features:
-///   ✅ Passwords hashed with BCrypt (never stored in plain text)
-///   ✅ JWT tokens for stateless authentication
-///   ✅ Email uniqueness enforced (prevents duplicate accounts)
-///   ✅ Password verification constant-time (prevents timing attacks)
-///   ✅ First user auto-promoted to admin (simplifies initial setup)
-///   ✅ Role-based authorization enforced on note endpoints
-/// 
-/// Real-world example:
-///   1. Deploy Hamco API
-///   2. First person registers → automatically becomes admin
-///   3. Admin can create blog posts (POST /api/notes)
-///   4. Anyone can read blog posts (GET /api/notes) - no auth needed
-///   5. Only admin can edit/delete posts
-/// 
-/// This is a common pattern for:
-///   - Personal blogs (you're the only author)
-///   - Company blogs (small team of authors)
-///   - Content management systems (controlled publishing)
-/// </remarks>
 [ApiController]
-[Route("api/[controller]")]  // Route: /api/auth
+[Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    // Dependencies injected via constructor
     private readonly HamcoDbContext _context;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtService _jwtService;
     private readonly IConfiguration _configuration;
+    private readonly ITransactionalEmailService _emailService;
 
-    /// <summary>
-    /// Initializes a new instance of the AuthController.
-    /// </summary>
-    /// <param name="context">Database context for user data access.</param>
-    /// <param name="passwordHasher">Service for hashing and verifying passwords.</param>
-    /// <param name="jwtService">Service for generating and validating JWT tokens.</param>
-    /// <param name="configuration">Configuration for environment variables (registration lock, etc.).</param>
-    /// <remarks>
-    /// Multiple dependency injection:
-    ///   This controller requires 4 services:
-    ///   1. HamcoDbContext: Database access (user lookup, creation)
-    ///   2. IPasswordHasher: Password security (hash, verify)
-    ///   3. IJwtService: Token generation (JWT creation)
-    ///   4. IConfiguration: Environment variables and settings
-    /// 
-    /// All dependencies registered in Program.cs:
-    ///   - AddDbContext&lt;HamcoDbContext&gt;: Database context
-    ///   - AddAuthServices(): Password hasher + JWT service
-    ///   - IConfiguration: Automatically registered by ASP.NET Core
-    /// 
-    /// DI container creates instances and injects them automatically.
-    /// 
-    /// Why use interfaces (IPasswordHasher, IJwtService)?
-    ///   - Testability: Can inject mock implementations in tests
-    ///   - Flexibility: Can swap implementations without changing controller
-    ///   - Dependency Inversion Principle: Depend on abstractions, not concretions
-    /// </remarks>
+    private const int TokenExpiryMinutes = 20;
+
     public AuthController(
         HamcoDbContext context,
         IPasswordHasher passwordHasher,
         IJwtService jwtService,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ITransactionalEmailService emailService)
     {
         _context = context;
         _passwordHasher = passwordHasher;
         _jwtService = jwtService;
         _configuration = configuration;
+        _emailService = emailService;
     }
 
-    /// <summary>
-    /// Registers a new user account. The first registered user automatically becomes an administrator.
-    /// </summary>
-    /// <param name="request">
-    /// Registration data (username, email, password).
-    /// Validated automatically via Data Annotations.
-    /// </param>
-    /// <returns>
-    /// 201 Created with JWT token if successful.
-    /// 409 Conflict if email already exists or validation fails.
-    /// </returns>
-    /// <remarks>
-    /// HTTP Method: POST /api/auth/register
-    /// 
-    /// IMPORTANT: First user becomes admin automatically!
-    /// This simplifies initial setup - no separate admin creation needed.
-    /// Subsequent users are regular users (IsAdmin = false).
-    /// 
-    /// Request body (JSON):
-    /// {
-    ///   "username": "johndoe",
-    ///   "email": "john@example.com",
-    ///   "password": "securePassword123"
-    /// }
-    /// 
-    /// Response (201 Created):
-    /// {
-    ///   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    ///   "userId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    ///   "email": "john@example.com",
-    ///   "roles": [],
-    ///   "expiresAt": "2026-02-06T15:30:00Z"
-    /// }
-    /// 
-    /// Response (409 Conflict) - Email exists:
-    /// {
-    ///   "message": "Email already exists"
-    /// }
-    /// 
-    /// Registration process:
-    /// 1. Validate input (automatic via Data Annotations)
-    /// 2. Check if email already exists (prevent duplicates)
-    /// 3. Check if this is the first user (determines admin status)
-    /// 4. Hash password with BCrypt (original password discarded)
-    /// 5. Create user entity with appropriate role
-    /// 6. Save to database
-    /// 7. Generate JWT token
-    /// 8. Return token to client (immediate login)
-    /// 
-    /// Admin promotion logic:
-    ///   var isFirstUser = !await _context.Users.AnyAsync();
-    ///   user.IsAdmin = isFirstUser;  // true if first, false otherwise
-    /// 
-    /// Why immediate login after registration?
-    ///   Better UX: User doesn't need to login separately
-    ///   Industry standard: Most apps do this (Twitter, Facebook, etc.)
-    ///   Token returned: Client stores it and is authenticated
-    /// 
-    /// Security considerations:
-    ///   ✅ Password hashed before storage (BCrypt, work factor 12)
-    ///   ✅ Email uniqueness checked (prevents duplicate accounts)
-    ///   ✅ First user promoted to admin (simplifies setup)
-    ///   ⚠️ No email verification (future: send confirmation email)
-    ///   ⚠️ Weak password rules (6 chars minimum, no complexity)
-    ///   ⚠️ No rate limiting (vulnerable to spam registrations)
-    /// 
-    /// Real-world deployment:
-    ///   1. Deploy API to production
-    ///   2. Register first user (yourself) → becomes admin
-    ///   3. Use admin token to create initial content
-    ///   4. Later users register as regular users
-    ///   5. Manually promote additional admins via database if needed
-    /// </remarks>
-    [HttpPost("register")]  // Route: POST /api/auth/register
-    [EnableRateLimiting("auth")]  // Rate limit: 5 requests per 15 minutes per IP
-    public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
+    [HttpPost("register")]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> Register(RegisterRequest request)
     {
-        // Step 0: Check if registration is allowed via environment variable
-        // ALLOW_REGISTRATION defaults to "false" (blocked) for security
-        // Set to "true" in environment to enable public registration
         var allowRegistration = _configuration.GetValue<bool>("ALLOW_REGISTRATION", false);
-        
         if (!allowRegistration)
         {
             return StatusCode(403, new { message = "Registration is currently disabled" });
         }
 
-        // Step 1: Check if email already exists
-        // AnyAsync(): Returns true if any user matches condition
-        // Lambda: u => u.Email == request.Email
-        //   'u': User parameter
-        //   'u.Email == request.Email': Condition to check
-        // 
-        // SQL generated:
-        // SELECT CASE WHEN EXISTS(
-        //   SELECT 1 FROM users WHERE email = ?
-        // ) THEN 1 ELSE 0 END;
-        // 
-        // Performance: Uses EXISTS (stops at first match, efficient)
-        if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+
+        if (existingUser != null)
         {
-            // Email exists, return 409 Conflict (more semantically correct than 400)
-            // Conflict() returns 409 status code
-            // Anonymous object: new { property = value }
-            //   Creates object with 'message' property
-            //   Serialized to JSON: {"message":"Email already exists"}
-            return Conflict(new { message = "Email already exists" });
+            if (existingUser.IsEmailVerified)
+            {
+                return Conflict(new { message = "Email already exists" });
+            }
+
+            // Existing unverified account: resend verification token, no duplicate row.
+            var resendToken = GenerateSecureToken();
+            existingUser.EmailVerificationTokenHash = HashToken(resendToken);
+            existingUser.EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddMinutes(TokenExpiryMinutes);
+            await _context.SaveChangesAsync();
+
+            await _emailService.SendVerificationEmailAsync(
+                normalizedEmail,
+                BuildAbsoluteUrl($"/auth/verify-email?token={Uri.EscapeDataString(resendToken)}"));
+
+            return Ok(new
+            {
+                message = "Account already exists but is not verified. We sent a new verification email.",
+                requiresEmailVerification = true,
+                email = normalizedEmail
+            });
         }
 
-        // Step 2: Check if this is the first user (should be admin)
         var isFirstUser = !await _context.Users.AnyAsync();
-        
-        // Step 3: Create new user entity
-        // Note: Password is HASHED, not stored in plain text!
+        var verificationToken = GenerateSecureToken();
+
         var user = new User
         {
-            // Id generated automatically (Guid.NewGuid() in User model)
             Username = request.Username,
-            Email = request.Email,
-            
-            // CRITICAL: Hash password before storing!
-            // _passwordHasher.HashPassword() uses BCrypt:
-            //   Input:  "myPassword123"
-            //   Output: "$2a$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW"
-            // Original password is NEVER stored or logged!
+            Email = normalizedEmail,
             PasswordHash = _passwordHasher.HashPassword(request.Password),
-            
             CreatedAt = DateTime.UtcNow,
-            
-            // First user automatically becomes admin
             IsAdmin = isFirstUser,
-            
-            // Email not verified yet (future: send verification email via Mailjet)
             IsEmailVerified = false,
-            
-            // Assign Admin role to first user for consistency
-            Roles = isFirstUser ? new List<string> { "Admin" } : new List<string>()
+            Roles = isFirstUser ? new List<string> { "Admin" } : new List<string>(),
+            EmailVerificationTokenHash = HashToken(verificationToken),
+            EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddMinutes(TokenExpiryMinutes)
         };
 
-        // Step 4: Add user to database
         _context.Users.Add(user);
-        
-        // Step 5: Save changes (execute INSERT)
-        // SQL: INSERT INTO users (id, username, email, password_hash, created_at, is_admin, is_email_verified)
-        //      VALUES (?, ?, ?, ?, ?, ?, ?);
         await _context.SaveChangesAsync();
 
-        // Step 6: Generate JWT token
-        // Token includes user ID, email, roles (if any)
-        // See JwtService.GenerateToken() for details
-        var token = _jwtService.GenerateToken(user);
+        await _emailService.SendVerificationEmailAsync(
+            normalizedEmail,
+            BuildAbsoluteUrl($"/auth/verify-email?token={Uri.EscapeDataString(verificationToken)}"));
 
-        // Step 7: Return 201 Created with authentication response
-        // CreatedAtAction returns 201 with Location header pointing to resource
-        // For auth endpoints, we return the response directly (no specific GET endpoint)
-        return CreatedAtAction(nameof(Register), new AuthResponse
+        return Ok(new
         {
-            Token = token,
-            UserId = user.Id,
-            Email = user.Email,
-            Roles = user.Roles,  // Empty list by default
-            ExpiresAt = DateTime.UtcNow.AddMinutes(60)  // Token expires in 60 minutes
+            message = "Registration successful. Please verify your email.",
+            requiresEmailVerification = true,
+            email = normalizedEmail
         });
     }
 
-    /// <summary>
-    /// Authenticates a user and returns a JWT token.
-    /// </summary>
-    /// <param name="request">
-    /// Login credentials (email and password).
-    /// Validated automatically via Data Annotations.
-    /// </param>
-    /// <returns>
-    /// 200 OK with JWT token if credentials are valid.
-    /// 401 Unauthorized if email not found or password incorrect.
-    /// 400 Bad Request if validation fails.
-    /// </returns>
-    /// <remarks>
-    /// HTTP Method: POST /api/auth/login
-    /// 
-    /// Request body (JSON):
-    /// {
-    ///   "email": "john@example.com",
-    ///   "password": "securePassword123"
-    /// }
-    /// 
-    /// Response (200 OK):
-    /// {
-    ///   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    ///   "userId": "a1b2c3d4-...",
-    ///   "email": "john@example.com",
-    ///   "roles": [],
-    ///   "expiresAt": null
-    /// }
-    /// 
-    /// Response (401 Unauthorized):
-    /// {
-    ///   "message": "Invalid email or password"
-    /// }
-    /// 
-    /// Login process:
-    /// 1. Validate input (automatic)
-    /// 2. Look up user by email
-    /// 3. Verify password against stored hash
-    /// 4. Generate JWT token if valid
-    /// 5. Return token to client
-    /// 
-    /// Security best practices:
-    ///   ✅ Generic error message (don't reveal if email exists)
-    ///   ✅ Constant-time password verification (BCrypt.Verify)
-    ///   ✅ Password never logged or exposed
-    ///   ⚠️ No rate limiting (vulnerable to brute force)
-    ///   ⚠️ No account lockout after failed attempts
-    ///   ⚠️ No multi-factor authentication (MFA)
-    /// 
-    /// Why generic error message?
-    ///   Bad: "Email not found" vs "Incorrect password"
-    ///     → Attacker learns which emails are registered
-    ///     → Can enumerate valid accounts
-    ///   
-    ///   Good: "Invalid email or password"
-    ///     → Same message for both cases
-    ///     → Attacker can't determine if email exists
-    /// 
-    /// Unauthorized() vs BadRequest():
-    ///   Unauthorized (401): Authentication failed (wrong credentials)
-    ///   BadRequest (400): Validation failed (malformed request)
-    ///   We use Unauthorized for invalid credentials (correct HTTP semantics).
-    /// </remarks>
-    [HttpPost("login")]  // Route: POST /api/auth/login
-    [EnableRateLimiting("auth")]  // Rate limit: 5 requests per 15 minutes per IP
+    [HttpGet("verify-email")]
+    public async Task<IActionResult> VerifyEmail([FromQuery] string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return Redirect("/auth/login?error=invalid_verification_token");
+        }
+
+        var tokenHash = HashToken(token);
+        var now = DateTime.UtcNow;
+
+        var user = await _context.Users.FirstOrDefaultAsync(u =>
+            u.EmailVerificationTokenHash == tokenHash &&
+            u.EmailVerificationTokenExpiresAt != null &&
+            u.EmailVerificationTokenExpiresAt > now);
+
+        if (user == null)
+        {
+            return Redirect("/auth/login?error=expired_or_invalid_verification_token");
+        }
+
+        user.IsEmailVerified = true;
+        user.EmailVerificationTokenHash = null;
+        user.EmailVerificationTokenExpiresAt = null;
+
+        await _context.SaveChangesAsync();
+
+        return Redirect("/auth/login?verified=1");
+    }
+
+    [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest request)
     {
-        // Step 1: Find user by email
-        // FirstOrDefaultAsync(): Returns first matching user, or null if not found
-        // Lambda: u => u.Email == request.Email
-        // 
-        // SQL: SELECT * FROM users WHERE email = ? LIMIT 1;
-        // 
-        // Why FirstOrDefaultAsync instead of FindAsync?
-        //   FindAsync: Lookup by primary key (Id)
-        //   FirstOrDefaultAsync: Lookup by any field (Email)
-        // 
-        // Email should be unique (database constraint recommended)
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
 
-        // Step 2: Verify user exists and password is correct
-        // Two checks combined with logical AND (&&) and NOT (!):
-        //   user == null: No user with that email
-        //   !_passwordHasher.VerifyPassword(...): Password doesn't match
-        // 
-        // VerifyPassword() process:
-        //   1. Extract salt from stored hash
-        //   2. Hash input password with same salt
-        //   3. Compare hashes (constant-time comparison)
-        //   4. Return true if match, false otherwise
-        // 
-        // Short-circuit evaluation:
-        //   If user == null, second condition not evaluated (prevents null reference)
-        //   C# evaluates left-to-right and stops when result is determined
         if (user == null || !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
-            // Authentication failed - generic error message
-            // Don't reveal whether email exists or password is wrong!
-            // 
-            // Unauthorized() returns 401 Unauthorized status code
-            // Common misconception: 401 means "not authorized"
-            // Correct meaning: 401 means "not authenticated" (who are you?)
-            // 403 Forbidden means "not authorized" (I know who you are, but you can't do this)
             return Unauthorized(new { message = "Invalid email or password" });
         }
 
-        // Step 3: Ensure roles are populated from IsAdmin flag
-        // (In case user was created before this fix, or roles not set in DB)
-        EnsureRolesPopulated(user);
+        if (!user.IsEmailVerified)
+        {
+            return StatusCode(403, new { message = "Please verify your email before logging in." });
+        }
 
-        // Step 4: Generate JWT token for authenticated user
+        EnsureRolesPopulated(user);
         var token = _jwtService.GenerateToken(user);
 
-        // Step 5: Return authentication response
-        // Same response as Register (consistent API)
         return Ok(new AuthResponse
         {
             Token = token,
@@ -404,253 +166,148 @@ public class AuthController : ControllerBase
         });
     }
 
-    /// <summary>
-    /// Gets the profile of the currently authenticated user.
-    /// </summary>
-    /// <returns>
-    /// 200 OK with user profile if authenticated.
-    /// 401 Unauthorized if not authenticated.
-    /// </returns>
-    /// <remarks>
-    /// HTTP Method: GET /api/auth/profile
-    /// 
-    /// Requires: Authorization: Bearer {token} header
-    /// 
-    /// This endpoint demonstrates JWT authentication:
-    /// 1. Client sends JWT token in Authorization header
-    /// 2. JWT middleware validates token signature
-    /// 3. If valid, extracts user claims from token
-    /// 4. Makes user identity available via User property
-    /// 5. Controller extracts user ID from claims
-    /// 6. Looks up full user data from database
-    /// 7. Returns user profile (excluding password hash)
-    /// 
-    /// Security: Password hash is NEVER returned in API responses!
-    /// </remarks>
-    [HttpGet("profile")]  // Route: GET /api/auth/profile
-    [Authorize]  // Requires valid JWT token
+    [HttpPost("forgot-password")]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
+    {
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+
+        // Always return generic success to avoid email enumeration.
+        if (user == null)
+        {
+            return Ok(new { message = "If your email is registered, you will receive a password reset link shortly." });
+        }
+
+        var resetToken = GenerateSecureToken();
+        user.PasswordResetTokenHash = HashToken(resetToken);
+        user.PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(TokenExpiryMinutes);
+        await _context.SaveChangesAsync();
+
+        await _emailService.SendPasswordResetEmailAsync(
+            normalizedEmail,
+            BuildAbsoluteUrl($"/auth/reset-password?token={Uri.EscapeDataString(resetToken)}"));
+
+        return Ok(new { message = "If your email is registered, you will receive a password reset link shortly." });
+    }
+
+    [HttpPost("reset-password")]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordRequest request)
+    {
+        var tokenHash = HashToken(request.Token);
+        var now = DateTime.UtcNow;
+
+        var user = await _context.Users.FirstOrDefaultAsync(u =>
+            u.PasswordResetTokenHash == tokenHash &&
+            u.PasswordResetTokenExpiresAt != null &&
+            u.PasswordResetTokenExpiresAt > now);
+
+        if (user == null)
+        {
+            return BadRequest(new { message = "Invalid or expired reset token" });
+        }
+
+        user.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
+        user.PasswordResetTokenHash = null;
+        user.PasswordResetTokenExpiresAt = null;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Password reset successful. You can now log in." });
+    }
+
+    [HttpGet("profile")]
+    [Authorize]
     public async Task<ActionResult<AuthResponse>> GetProfile()
     {
-        // Extract user ID from JWT token claims
-        // User.FindFirst() looks for claim by type
-        // ClaimTypes.NameIdentifier = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"
-        // This is where we store the user ID in JwtService.GenerateToken()
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        
         if (string.IsNullOrEmpty(userIdClaim))
         {
-            // Token is valid but doesn't contain user ID claim (shouldn't happen)
             return Unauthorized(new { message = "Invalid token claims" });
         }
 
-        // Look up user in database by ID
         var user = await _context.Users.FindAsync(userIdClaim);
-        
         if (user == null)
         {
-            // User was deleted after token was issued
             return Unauthorized(new { message = "User not found" });
         }
 
-        // Return user profile (same format as login/register for consistency)
-        // Password hash is NOT included!
         return Ok(new AuthResponse
         {
-            Token = string.Empty,  // Don't issue new token on profile request
+            Token = string.Empty,
             UserId = user.Id,
             Email = user.Email,
             Roles = user.Roles,
-            ExpiresAt = DateTime.MinValue  // Client should use existing token expiry
+            ExpiresAt = DateTime.MinValue
         });
     }
 
-    /// <summary>
-    /// Sets an HTTP-only cookie with the JWT token for persistent authentication.
-    /// </summary>
-    /// <param name="request">Request containing the JWT token to store in cookie.</param>
-    /// <returns>200 OK if cookie was set successfully.</returns>
-    /// <remarks>
-    /// HTTP Method: POST /api/auth/cookie
-    /// 
-    /// This endpoint enables cookie-based authentication flow:
-    /// 1. User logs in via /api/auth/login → receives JWT token
-    /// 2. Login page calls this endpoint with JWT token
-    /// 3. Server sets HTTP-only cookie with JWT
-    /// 4. Subsequent page loads include cookie automatically
-    /// 5. Server validates JWT from cookie → User.Identity.IsAuthenticated = true
-    /// 6. Nav bar shows authenticated state
-    /// 
-    /// Why cookie-based auth?
-    ///   - Cookies sent automatically with every request (no JS needed)
-    ///   - Server-side rendering can check User.Identity directly
-    ///   - HTTP-only cookies prevent XSS attacks (JS can't access token)
-    ///   - Works seamlessly with ASP.NET Core authentication middleware
-    /// 
-    /// Security features:
-    ///   ✅ HTTP-only cookie (prevents XSS)
-    ///   ✅ Secure flag in production (HTTPS only)
-    ///   ✅ SameSite=Strict (prevents CSRF)
-    ///   ✅ 1-hour expiration (matches JWT token expiry)
-    /// 
-    /// Request body (JSON):
-    /// {
-    ///   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-    /// }
-    /// 
-    /// Response (200 OK):
-    /// {
-    ///   "success": true
-    /// }
-    /// </remarks>
     [HttpPost("cookie")]
     public IActionResult SetAuthCookie([FromBody] SetCookieRequest request)
     {
-        // Validate token is provided
         if (string.IsNullOrEmpty(request.Token))
         {
             return BadRequest(new { message = "Token is required" });
         }
 
-        // Set HTTP-only cookie with JWT token
-        // Cookie name: "AuthToken" (matches ServiceCollectionExtensions JWT configuration)
-        // HttpOnly: true (prevents JavaScript access, XSS protection)
-        // Secure: true in production (HTTPS only)
-        // SameSite: Strict (prevents CSRF attacks)
-        // Expires: 1 hour (matches JWT token expiration)
         var cookieOptions = new CookieOptions
         {
-            HttpOnly = true,  // Can't be accessed by JavaScript (XSS protection)
-            Secure = !_configuration.GetValue<bool>("DEVELOPMENT_MODE", false),  // HTTPS only in production
-            SameSite = SameSiteMode.Strict,  // Only sent with same-site requests (CSRF protection)
-            Expires = DateTimeOffset.UtcNow.AddHours(1),  // Match JWT expiration
-            Path = "/"  // Available to entire application
+            HttpOnly = true,
+            Secure = !_configuration.GetValue<bool>("DEVELOPMENT_MODE", false),
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTimeOffset.UtcNow.AddHours(1),
+            Path = "/"
         };
 
-        // Set the cookie
-        // Response.Cookies.Append() adds Set-Cookie header to HTTP response
-        // Browser stores cookie and includes it in subsequent requests
-        // Cookie name MUST match OnMessageReceived in ServiceCollectionExtensions (line ~117)
         Response.Cookies.Append("AuthToken", request.Token, cookieOptions);
-
         return Ok(new { success = true });
     }
 
-    /// <summary>
-    /// Clears the authentication cookie (logout).
-    /// </summary>
-    /// <returns>Redirect to home page after logout.</returns>
-    /// <remarks>
-    /// HTTP Method: GET /api/auth/logout
-    /// 
-    /// Logout process:
-    /// 1. Delete AuthToken cookie
-    /// 2. Redirect to home page
-    /// 3. User.Identity.IsAuthenticated = false on next page load
-    /// 4. Nav bar shows "Register | Login"
-    /// 
-    /// Note: This doesn't invalidate the JWT token itself (stateless tokens can't be revoked)
-    /// Token remains valid until expiration, but browser won't send it anymore
-    /// For true token revocation, implement a token blacklist or use refresh tokens
-    /// </remarks>
     [HttpGet("logout")]
     public IActionResult Logout()
     {
-        // Delete authentication cookie by setting expired cookie
-        // Browser removes cookie when it sees Expires in the past
-        // Cookie name MUST match OnMessageReceived in ServiceCollectionExtensions
         Response.Cookies.Delete("AuthToken");
-
-        // Redirect to home page
         return Redirect("/");
     }
 
-    /// <summary>
-    /// Stub endpoint for forgot password (future Mailjet integration).
-    /// </summary>
-    /// <param name="request">Email address to send reset link to.</param>
-    /// <returns>200 OK with message about future implementation.</returns>
-    /// <remarks>
-    /// HTTP Method: POST /api/auth/forgot-password
-    /// 
-    /// Future implementation with Mailjet:
-    /// 1. Validate email exists in database
-    /// 2. Generate secure reset token (GUID or signed JWT)
-    /// 3. Store token in database with expiration (e.g., 1 hour)
-    /// 4. Send email via Mailjet with reset link
-    /// 5. Link contains token: /reset-password?token=xxx
-    /// 6. Return success message (don't reveal if email exists!)
-    /// 
-    /// Security: Always return success even if email doesn't exist
-    /// (prevents email enumeration attacks)
-    /// </remarks>
-    [HttpPost("forgot-password")]
-    public IActionResult ForgotPassword([FromBody] dynamic request)
-    {
-        // Stub implementation - always returns success
-        // In production, send password reset email via Mailjet
-        return Ok(new 
-        { 
-            message = "Password reset email sent (not implemented yet). " +
-                      "Future: Will integrate with Mailjet to send reset link."
-        });
-    }
-
-    /// <summary>
-    /// Stub endpoint for reset password (future Mailjet integration).
-    /// </summary>
-    /// <param name="request">Reset token and new password.</param>
-    /// <returns>200 OK with message about future implementation.</returns>
-    /// <remarks>
-    /// HTTP Method: POST /api/auth/reset-password
-    /// 
-    /// Future implementation:
-    /// 1. Validate reset token from database
-    /// 2. Check token hasn't expired
-    /// 3. Hash new password with BCrypt
-    /// 4. Update user's password hash
-    /// 5. Invalidate reset token
-    /// 6. Optionally send confirmation email
-    /// 7. Return success message
-    /// 
-    /// Security: Use constant-time token comparison
-    /// Invalidate token after use (one-time use only)
-    /// </remarks>
-    [HttpPost("reset-password")]
-    public IActionResult ResetPassword([FromBody] dynamic request)
-    {
-        // Stub implementation
-        // In production, validate token and update password
-        return Ok(new 
-        { 
-            message = "Password reset (not implemented yet). " +
-                      "Future: Will validate token and update password hash."
-        });
-    }
-
-    /// <summary>
-    /// Helper method to ensure user's Roles list reflects their IsAdmin status.
-    /// </summary>
-    /// <param name="user">User to update roles for.</param>
-    /// <remarks>
-    /// This ensures consistency between IsAdmin flag and Roles list.
-    /// Needed because:
-    /// 1. Roles list is not persisted to database (see HamcoDbContext)
-    /// 2. Must be populated when user is loaded from DB
-    /// 3. JWT token generation reads both IsAdmin and Roles
-    /// 
-    /// Called during login and registration to ensure response includes correct roles.
-    /// </remarks>
     private void EnsureRolesPopulated(User user)
     {
-        // If user is admin but Roles doesn't contain "Admin", add it
         if (user.IsAdmin && !user.Roles.Contains("Admin"))
         {
             user.Roles.Add("Admin");
         }
-        // If user is not admin but Roles contains "Admin", remove it
         else if (!user.IsAdmin && user.Roles.Contains("Admin"))
         {
             user.Roles.Remove("Admin");
         }
+    }
+
+    private static string GenerateSecureToken()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(32);
+        return Convert.ToBase64String(bytes)
+            .Replace("+", "-")
+            .Replace("/", "_")
+            .TrimEnd('=');
+    }
+
+    private static string HashToken(string token)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+        return Convert.ToHexString(hash);
+    }
+
+    private string BuildAbsoluteUrl(string path)
+    {
+        var configuredBaseUrl = _configuration["APP_BASE_URL"];
+        if (!string.IsNullOrWhiteSpace(configuredBaseUrl))
+        {
+            return $"{configuredBaseUrl.TrimEnd('/')}{path}";
+        }
+
+        var scheme = Request.Scheme;
+        var host = Request.Host.Value;
+        return $"{scheme}://{host}{path}";
     }
 }

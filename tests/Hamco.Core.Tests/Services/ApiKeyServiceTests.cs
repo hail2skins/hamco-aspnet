@@ -2,6 +2,7 @@ using Hamco.Core.Models;
 using Hamco.Core.Services;
 using Hamco.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System.Security.Claims;
 
 namespace Hamco.Core.Tests.Services;
@@ -115,7 +116,7 @@ public class ApiKeyServiceTests : IDisposable
         // Create service instance (will be implemented in Hamco.Services)
         // This line will fail until we implement ApiKeyService!
         // That's TDD - write tests first, implement after.
-        _service = new Hamco.Services.ApiKeyService(_context);
+        _service = new Hamco.Services.ApiKeyService(_context, new MemoryCache(new MemoryCacheOptions()));
     }
 
     /// <summary>

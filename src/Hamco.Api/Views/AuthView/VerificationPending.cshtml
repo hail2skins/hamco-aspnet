@@ -1,0 +1,22 @@
+@{
+    ViewBag.Title = "Verify Email";
+    ViewBag.Heading = "Email Verification Required";
+    ViewBag.Slogan = "One quick step left";
+    var email = ViewBag.Email as string;
+}
+
+<div class="row gx-4 gx-lg-5 justify-content-center">
+    <div class="col-md-10 col-lg-10 col-xl-8">
+        <div class="alert alert-info">
+            <h4>Check your inbox</h4>
+            <p>
+                We sent a verification email@(string.IsNullOrWhiteSpace(email) ? "" : $" to {email}") with a link that expires in 20 minutes.
+            </p>
+            <p class="mb-0">Once verified, you can log in.</p>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="/auth/login" class="btn btn-primary">Go to Login</a>
+        </div>
+    </div>
+</div>
